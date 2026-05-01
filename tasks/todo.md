@@ -1,5 +1,33 @@
 # Task: Selective pi-subagents Feature Adoption Milestone Plan
 
+## Plan: pi v0.71.0 UX compatibility adoption
+
+**Goal:** Apply the top 3 user-facing v0.71.0 adoption candidates to this extension set: composable FFF editor wrapping, `message_end` replacement-aware harness parsing, and `PI_CODING_AGENT_SESSION_DIR` support for subagent/sandbox paths.
+
+Done when:
+- [x] Confirm v0.71.0 API shapes from installed docs/types before editing
+- [x] Update `extensions/fff-search` to wrap any existing custom editor factory via `ctx.ui.getEditorComponent()` while preserving tools-only/disabled cleanup behavior
+- [x] Add/update FFF tests proving existing editor components are composed instead of clobbered
+- [x] Update `extensions/agentic-harness` runner parsing for finalized `message_end` replacement semantics without breaking `turn_end`/`agent_end` aggregation
+- [x] Add/update harness tests for replacement/stale-message behavior and metadata/usage correctness
+- [x] Add `PI_CODING_AGENT_SESSION_DIR` path resolution into subagent/sandbox writable roots where child pi session storage can be customized
+- [x] Add/update harness tests for custom session-dir environment handling
+- [x] Run focused tests, then extension builds/tests for affected packages
+
+### Review
+- FFF now captures `ctx.ui.getEditorComponent()` and wraps the previous editor factory when present, preserving existing editor customizations while injecting FFF `@` mention autocomplete. Follow-up review found disabled/error/shutdown paths could clobber pre-existing editors; fixed by restoring only when FFF installed its wrapper.
+- Harness runner event aggregation now replaces assistant messages sharing `responseId`/`id`, then rebuilds usage and nested subagent metadata so stale finalized messages do not double-count.
+- Sandbox writable roots now include `PI_CODING_AGENT_SESSION_DIR` when set, in addition to `PI_CODING_AGENT_DIR`, for root bash and subagent sandbox launches.
+- Independent re-review after fixes: reviewer-bug and reviewer-consistency reported no findings.
+- Verification passed:
+  - `cd extensions/fff-search && npm test -- --run tests/index.test.ts && npm run build`
+  - `cd extensions/agentic-harness && npm test -- --run tests/runner-events.test.ts tests/agent-dir.test.ts && npm run build`
+  - `cd extensions/agentic-harness && npm test`
+  - `cd extensions/fff-search && npm test`
+  - `git diff --check`
+- Note: `npm ci` reported existing npm audit vulnerabilities in both affected extension packages; no new dependencies were added.
+
+
 ## Plan: Team mode architecture mermaid diagram (worker-1)
 
 Done when:

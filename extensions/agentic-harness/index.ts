@@ -33,7 +33,7 @@ import { renderWebfetchCall, renderWebfetchResult } from "./webfetch/render.js";
 import { getDefaultApprovalStore } from "./sandbox/approval-store.js";
 import { parseSandboxApprovalMode } from "./sandbox/approval-mode.js";
 import { createSandboxedBashOperations } from "./sandbox/bash-operations.js";
-import { resolvePiAgentDir } from "./sandbox/agent-dir.js";
+import { resolvePiAgentDir, resolvePiSessionDir } from "./sandbox/agent-dir.js";
 import { makePolicyFingerprint } from "./sandbox/policy-engine.js";
 import { isSensitiveEnvPath } from "./sandbox/sensitive-env.js";
 
@@ -75,6 +75,8 @@ export default function (pi: ExtensionAPI) {
   const BUNDLED_AGENTS_DIR = join(__dirname, "agents");
   const BUNDLED_SKILLS_DIR = join(__dirname, "skills");
   const agentDir = resolvePiAgentDir();
+  const sessionDir = resolvePiSessionDir();
+  const piWritableRoots = Array.from(new Set([agentDir, ...(sessionDir ? [sessionDir] : [])]));
 
   const DIRECT_INPUT_OPTION = "Enter custom response";
 
@@ -114,7 +116,7 @@ export default function (pi: ExtensionAPI) {
       enabled: true,
       workspaceRoot: process.cwd(),
       networkMode: "on" as const,
-      additionalWritableRoots: [agentDir],
+      additionalWritableRoots: piWritableRoots,
       approvalMode: parsedApprovalMode.mode,
       approvalResolver: createRootApprovalResolver(ctx),
       requireApprovalForAllCommands,
@@ -520,9 +522,10 @@ export default function (pi: ExtensionAPI) {
           enabled: true,
           workspaceRoot: defaultCwd,
           // Subagents must reach model/provider endpoints and update local
-          // session lock/state files under PI_CODING_AGENT_DIR (default: ~/.pi/agent).
+          // session lock/state files under PI_CODING_AGENT_DIR (default: ~/.pi/agent)
+          // or PI_CODING_AGENT_SESSION_DIR when session storage is customized.
           networkMode: "on" as const,
-          additionalWritableRoots: [agentDir, runCwd],
+          additionalWritableRoots: Array.from(new Set([...piWritableRoots, runCwd])),
           approvalMode: parsedApprovalMode.mode,
           approvalResolver,
           approvalStore,

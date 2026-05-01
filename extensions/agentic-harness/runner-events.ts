@@ -1,4 +1,4 @@
-import type { SingleResult } from "./types.js";
+import { emptyUsage, type SingleResult } from "./types.js";
 
 const seenSignaturesKey = Symbol("seenMessageSignatures");
 
@@ -74,6 +74,54 @@ function updateMetadata(result: SingleResult, message: any): void {
   if (message.errorMessage) result.errorMessage = message.errorMessage;
 }
 
+function getReplacementKey(message: any): string | undefined {
+  if (typeof message.responseId === "string" && message.responseId.length > 0) return `response:${message.responseId}`;
+  if (typeof message.id === "string" && message.id.length > 0) return `id:${message.id}`;
+  return undefined;
+}
+
+function collectNestedSubagentCalls(message: any): Array<{ agent: string; task: string }> {
+  if (!Array.isArray(message.content)) return [];
+  const calls: Array<{ agent: string; task: string }> = [];
+  for (const part of message.content) {
+    if (
+      part?.type === "toolCall" &&
+      part.name === "subagent" &&
+      part.arguments
+    ) {
+      const args = part.arguments as Record<string, unknown>;
+      const agent = (args.agent as string) || "unknown";
+      const task = typeof args.task === "string"
+        ? args.task.slice(0, 120)
+        : "(no task)";
+      calls.push({ agent, task });
+    }
+  }
+  return calls;
+}
+
+function rebuildDerivedMessageState(result: SingleResult): void {
+  result.usage = emptyUsage();
+  const nestedCalls: Array<{ agent: string; task: string }> = [];
+
+  for (const message of result.messages) {
+    if (!message || message.role !== "assistant") continue;
+    result.usage.turns++;
+    const usage = message.usage;
+    if (usage) {
+      result.usage.input += usage.input || 0;
+      result.usage.output += usage.output || 0;
+      result.usage.cacheRead += usage.cacheRead || 0;
+      result.usage.cacheWrite += usage.cacheWrite || 0;
+      result.usage.cost += usage.cost?.total || 0;
+      result.usage.contextTokens = usage.totalTokens || result.usage.contextTokens;
+    }
+    nestedCalls.push(...collectNestedSubagentCalls(message));
+  }
+
+  result.nestedCalls = nestedCalls.length > 0 ? nestedCalls : undefined;
+}
+
 function addAssistantMessage(result: SingleResult, message: any): boolean {
   if (!message || message.role !== "assistant") return false;
 
@@ -82,39 +130,23 @@ function addAssistantMessage(result: SingleResult, message: any): boolean {
   const sig = getMessageSignature(message);
   const seen = getSeenSignatures(result);
   if (seen.has(sig)) return false;
-  seen.add(sig);
 
-  result.messages.push(message);
-  result.usage.turns++;
-
-  const usage = message.usage;
-  if (usage) {
-    result.usage.input += usage.input || 0;
-    result.usage.output += usage.output || 0;
-    result.usage.cacheRead += usage.cacheRead || 0;
-    result.usage.cacheWrite += usage.cacheWrite || 0;
-    result.usage.cost += usage.cost?.total || 0;
-    result.usage.contextTokens = usage.totalTokens || 0;
-  }
-
-  if (Array.isArray(message.content)) {
-    for (const part of message.content) {
-      if (
-        part?.type === "toolCall" &&
-        part.name === "subagent" &&
-        part.arguments
-      ) {
-        if (!result.nestedCalls) result.nestedCalls = [];
-        const args = part.arguments as Record<string, unknown>;
-        const agent = (args.agent as string) || "unknown";
-        const task = typeof args.task === "string"
-          ? args.task.slice(0, 120)
-          : "(no task)";
-        result.nestedCalls.push({ agent, task });
-      }
+  const replacementKey = getReplacementKey(message);
+  if (replacementKey) {
+    const replaceIndex = result.messages.findIndex((existing) => getReplacementKey(existing) === replacementKey);
+    if (replaceIndex >= 0) {
+      const previousSig = getMessageSignature(result.messages[replaceIndex]);
+      result.messages[replaceIndex] = message;
+      seen.delete(previousSig);
+      seen.add(sig);
+      rebuildDerivedMessageState(result);
+      return true;
     }
   }
 
+  seen.add(sig);
+  result.messages.push(message);
+  rebuildDerivedMessageState(result);
   return true;
 }
 

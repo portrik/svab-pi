@@ -50,6 +50,44 @@ describe("processPiJsonLine", () => {
     expect(result.messages).toHaveLength(1);
   });
 
+  it("should replace finalized assistant messages with the same responseId", () => {
+    const result = makeEmptyResult();
+    processPiJsonLine(JSON.stringify({
+      type: "message_end",
+      message: {
+        role: "assistant",
+        responseId: "resp-1",
+        content: [
+          { type: "text", text: "draft" },
+          { type: "toolCall", name: "subagent", arguments: { agent: "explorer", task: "old task" } },
+        ],
+        usage: { input: 10, output: 5, cacheRead: 1, cacheWrite: 2, totalTokens: 18, cost: { total: 0.01 } },
+      },
+    }), result);
+
+    const changed = processPiJsonLine(JSON.stringify({
+      type: "message_end",
+      message: {
+        role: "assistant",
+        responseId: "resp-1",
+        content: [{ type: "text", text: "final" }],
+        usage: { input: 20, output: 7, cacheRead: 3, cacheWrite: 4, totalTokens: 34, cost: { total: 0.02 } },
+      },
+    }), result);
+
+    expect(changed).toBe(true);
+    expect(result.messages).toHaveLength(1);
+    expect(result.messages[0].content[0].text).toBe("final");
+    expect(result.usage.turns).toBe(1);
+    expect(result.usage.input).toBe(20);
+    expect(result.usage.output).toBe(7);
+    expect(result.usage.cacheRead).toBe(3);
+    expect(result.usage.cacheWrite).toBe(4);
+    expect(result.usage.cost).toBeCloseTo(0.02);
+    expect(result.usage.contextTokens).toBe(34);
+    expect(result.nestedCalls).toBeUndefined();
+  });
+
   it("should skip non-assistant messages", () => {
     const result = makeEmptyResult();
     const line = JSON.stringify({

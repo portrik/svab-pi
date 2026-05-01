@@ -152,9 +152,9 @@ describe('fff-search extension', () => {
     await handler?.({ type: 'session_start' }, ctx);
 
     expect(FileFinder.create).not.toHaveBeenCalled();
-    expect(ctx.ui.setEditorComponent).toHaveBeenCalledWith(undefined);
+    expect(ctx.ui.setEditorComponent).not.toHaveBeenCalled();
     expect(ctx.ui.notify).toHaveBeenCalledWith(
-      "FFF is disabled at '/'; built-in find/grep fallback is active.",
+      "FFF is disabled at top-level directories (/ or $HOME); built-in find/grep fallback is active.",
       'info',
     );
   });
@@ -167,13 +167,49 @@ describe('fff-search extension', () => {
       cwd: '/repo',
       ui: {
         setEditorComponent: vi.fn(),
+        getEditorComponent: vi.fn(() => undefined),
         notify: vi.fn(),
       },
     };
 
     await events.get('session_start')?.[0]?.({ type: 'session_start' }, ctx);
 
+    expect(ctx.ui.getEditorComponent).toHaveBeenCalled();
     expect(ctx.ui.setEditorComponent).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('wraps an existing editor component instead of replacing it', async () => {
+    const { mockPi, events } = createMockPi();
+    extension(mockPi);
+
+    const previousSetAutocompleteProvider = vi.fn();
+    const previousEditor = { setAutocompleteProvider: previousSetAutocompleteProvider };
+    const previousFactory = vi.fn(() => previousEditor);
+    const ctx: any = {
+      cwd: '/repo',
+      ui: {
+        setEditorComponent: vi.fn(),
+        getEditorComponent: vi.fn(() => previousFactory),
+        notify: vi.fn(),
+      },
+    };
+
+    await events.get('session_start')?.[0]?.({ type: 'session_start' }, ctx);
+
+    const wrapperFactory = ctx.ui.setEditorComponent.mock.calls[0][0];
+    const editor = wrapperFactory({}, {}, {});
+    expect(previousFactory).toHaveBeenCalledWith({}, {}, {});
+    expect(editor).toBe(previousEditor);
+
+    const baseProvider = { getSuggestions: vi.fn(), applyCompletion: vi.fn() };
+    editor.setAutocompleteProvider(baseProvider);
+
+    expect(previousSetAutocompleteProvider).toHaveBeenCalledWith(expect.any(Object));
+    expect(previousSetAutocompleteProvider.mock.calls[0][0]).not.toBe(baseProvider);
+
+    await events.get('session_shutdown')?.[0]?.({ type: 'session_shutdown' }, ctx);
+
+    expect(ctx.ui.setEditorComponent).toHaveBeenLastCalledWith(previousFactory);
   });
 
   it('disables editor replacement in tools-only mode', async () => {
@@ -191,7 +227,7 @@ describe('fff-search extension', () => {
 
     await events.get('session_start')?.[0]?.({ type: 'session_start' }, ctx);
 
-    expect(ctx.ui.setEditorComponent).toHaveBeenCalledWith(undefined);
+    expect(ctx.ui.setEditorComponent).not.toHaveBeenCalled();
   });
 
   it('find delegates to fileSearch and returns relative paths', async () => {

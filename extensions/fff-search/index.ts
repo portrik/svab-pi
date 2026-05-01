@@ -196,6 +196,8 @@ export default function fffExtension(pi: ExtensionAPI) {
 	let finder: FileFinder | null = null;
 	let finderCwd: string | null = null;
 	let activeCwd = process.cwd();
+	let previousEditorFactory: any;
+	let fffEditorInstalled = false;
 	const cursorStore = new CursorStore();
 	const nativeFffAvailable = FileFinder.isAvailable();
 
@@ -340,18 +342,37 @@ export default function fffExtension(pi: ExtensionAPI) {
 		}));
 	}
 
-	function applyEditorMode(ctx: { ui: { setEditorComponent: (factory: any) => void } }) {
+	function restoreEditorMode(ctx: { ui: { setEditorComponent: (factory: any) => void } }) {
+		if (!fffEditorInstalled) return;
+		ctx.ui.setEditorComponent(previousEditorFactory);
+		previousEditorFactory = undefined;
+		fffEditorInstalled = false;
+	}
+
+	function applyEditorMode(ctx: { ui: { setEditorComponent: (factory: any) => void; getEditorComponent?: () => any } }) {
 		const mode = getMode();
 		if (mode === "tools-only") {
-			ctx.ui.setEditorComponent(undefined);
+			restoreEditorMode(ctx);
 			return;
 		}
+		if (fffEditorInstalled) return;
 
-		ctx.ui.setEditorComponent((tui: any, theme: any, keybindings: any) =>
-			new FffEditor(tui, theme, keybindings, (baseProvider) =>
-				new FffAtMentionProvider(baseProvider, getMentionItems),
-			),
-		);
+		const wrapProvider = (baseProvider: AutocompleteProvider) => new FffAtMentionProvider(baseProvider, getMentionItems);
+		previousEditorFactory = ctx.ui.getEditorComponent?.();
+		ctx.ui.setEditorComponent((tui: any, theme: any, keybindings: any) => {
+			if (previousEditorFactory) {
+				const editor = previousEditorFactory(tui, theme, keybindings);
+				const setAutocompleteProvider = editor?.setAutocompleteProvider;
+				if (typeof setAutocompleteProvider === "function") {
+					editor.setAutocompleteProvider = (provider: AutocompleteProvider) =>
+						setAutocompleteProvider.call(editor, wrapProvider(provider));
+				}
+				return editor;
+			}
+
+			return new FffEditor(tui, theme, keybindings, wrapProvider);
+		});
+		fffEditorInstalled = true;
 	}
 
 	// --- Flags / lifecycle ---
@@ -364,12 +385,12 @@ export default function fffExtension(pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
 		activeCwd = ctx.cwd;
 		if (!nativeFffAvailable) {
-			ctx.ui.setEditorComponent(undefined);
+			restoreEditorMode(ctx);
 			ctx.ui.notify("FFF native engine unavailable; using built-in find/grep tools as fallback where possible.", "warning");
 			return;
 		}
 		if (isFilesystemRoot(activeCwd)) {
-			ctx.ui.setEditorComponent(undefined);
+			restoreEditorMode(ctx);
 			ctx.ui.notify("FFF is disabled at top-level directories (/ or $HOME); built-in find/grep fallback is active.", "info");
 			return;
 		}
@@ -378,7 +399,7 @@ export default function fffExtension(pi: ExtensionAPI) {
 			applyEditorMode(ctx);
 		} catch (e: unknown) {
 			const msg = e instanceof Error ? e.message : String(e);
-			ctx.ui.setEditorComponent(undefined);
+			restoreEditorMode(ctx);
 			ctx.ui.notify(`FFF init failed: ${msg}. Built-in search fallback remains available for find/grep.`, "warning");
 		}
 	});
@@ -388,7 +409,7 @@ export default function fffExtension(pi: ExtensionAPI) {
 	});
 
 	pi.on("session_shutdown", async (_event, ctx) => {
-		ctx.ui.setEditorComponent(undefined);
+		restoreEditorMode(ctx);
 		destroyFinder();
 	});
 
