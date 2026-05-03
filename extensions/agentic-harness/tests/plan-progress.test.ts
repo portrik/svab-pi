@@ -499,3 +499,82 @@ describe("PlanProgressTracker.render", () => {
     expect(lines[0]).toContain("Build a feature");
   });
 });
+
+describe("task status snapshot and recovery", () => {
+  function trackerWithTasks(): PlanProgressTracker {
+    const t = new PlanProgressTracker();
+    t.loadPlan([
+      "# Snap Plan",
+      "",
+      "**Goal:** Snapshot test",
+      "",
+      "---",
+      "",
+      "### Task 1: First",
+      "",
+      "**Dependencies:** None",
+      "**Files:**",
+      "- Modify: `a.ts`",
+      "",
+      "- [ ] **Step 1:** Run",
+      "",
+      "### Task 2: Second",
+      "",
+      "**Dependencies:** Task 1",
+      "**Files:**",
+      "- Modify: `b.ts`",
+      "",
+      "- [ ] **Step 1:** Run",
+      "",
+    ].join("\n"));
+    return t;
+  }
+
+  it("getTaskStatuses returns current statuses keyed by task id", () => {
+    const t = trackerWithTasks();
+    t.startTaskById(1);
+    t.completeTask(1, true);
+    t.startTaskById(2);
+
+    const statuses = t.getTaskStatuses();
+    expect(statuses).toEqual([
+      { id: 1, status: "completed" },
+      { id: 2, status: "running" },
+    ]);
+  });
+
+  it("restoreTaskStatuses preserves matching tasks and ignores unknown ids", () => {
+    const t = trackerWithTasks();
+    t.restoreTaskStatuses([
+      { id: 1, status: "completed" },
+      { id: 2, status: "failed" },
+      { id: 99, status: "completed" },
+    ]);
+
+    const progress = t.getProgress();
+    expect(progress).toMatchObject({ completed: 1, failed: 1, running: 0, pending: 0 });
+  });
+
+  it("restoreTaskStatuses ignores statuses when no plan is loaded", () => {
+    const t = new PlanProgressTracker();
+    t.restoreTaskStatuses([{ id: 1, status: "completed" }]);
+    expect(t.hasPlan()).toBe(false);
+  });
+
+  it("demoteRunningToPending converts all running tasks to pending", () => {
+    const t = trackerWithTasks();
+    t.startTaskById(1);
+    t.startTaskById(2);
+
+    expect(t.getProgress()).toMatchObject({ running: 2 });
+
+    t.demoteRunningToPending();
+
+    expect(t.getProgress()).toMatchObject({ running: 0, pending: 2 });
+  });
+
+  it("demoteRunningToPending is no-op when no plan is loaded", () => {
+    const t = new PlanProgressTracker();
+    expect(() => t.demoteRunningToPending()).not.toThrow();
+  });
+});

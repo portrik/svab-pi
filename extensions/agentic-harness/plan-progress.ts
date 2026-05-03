@@ -227,6 +227,39 @@ export class PlanProgressTracker {
     return { completed, total: this.tasks.length, failed, running, pending };
   }
 
+  getTaskStatuses(): Array<{ id: number; status: TaskStatus }> {
+    return this.tasks.map((t) => ({ id: t.id, status: t.status }));
+  }
+
+  restoreTaskStatuses(statuses: Array<{ id: number; status: TaskStatus }>): void {
+    if (!this.hasPlan()) return;
+
+    const byId = new Map(statuses.map((s) => [s.id, s.status]));
+    let changed = false;
+    for (const task of this.tasks) {
+      const restored = byId.get(task.id);
+      if (restored && task.status !== restored) {
+        task.status = restored;
+        changed = true;
+      }
+    }
+    if (changed) this.notifyChanged();
+  }
+
+  demoteRunningToPending(): void {
+    if (!this.hasPlan()) return;
+
+    let changed = false;
+    for (const task of this.tasks) {
+      if (task.status === "running") {
+        task.status = "pending";
+        task.startedAt = undefined;
+        changed = true;
+      }
+    }
+    if (changed) this.notifyChanged();
+  }
+
   render(theme: Theme, maxWidth: number): string[] {
     if (!this.hasPlan()) return [];
 
