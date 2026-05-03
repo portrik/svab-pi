@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.20.0](https://github.com/tmdgusya/roach-pi/compare/v1.19.0...v1.20.0) (2026-05-03)
+
+### Features
+
+* add task status snapshot and recovery to PlanProgressTracker ([abab546](https://github.com/tmdgusya/roach-pi/commit/abab5460e3f0633846afd4ff6b8c5e7baf900365))
+* persist plan progress snapshots as CustomEntries ([d87a347](https://github.com/tmdgusya/roach-pi/commit/d87a347136e6111ddaa02bc6fc1f95039f29f96f))
+
+### Bug Fixes
+
+* guard cross-task completion, add CustomEntry replay and running demotion ([497c4fd](https://github.com/tmdgusya/roach-pi/commit/497c4fda4e428279cafc0a6ec272081428cb7081))
+
+### Documentation
+
+* add plan progress robustness hardening plan ([d6bd1ba](https://github.com/tmdgusya/roach-pi/commit/d6bd1baa00bbaef6b44b36831d02c134f0399902))
+
 ## [1.19.0](https://github.com/tmdgusya/roach-pi/compare/v1.18.2...v1.19.0) (2026-05-03)
 
 ### Features
