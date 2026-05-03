@@ -1,3 +1,36 @@
+export interface ToolActivity {
+  name: string;
+  args: Record<string, unknown>;
+  timestamp: number;
+}
+
+export type AsyncRunStatus = "spawning" | "running" | "completed" | "failed" | "interrupted";
+
+export interface RunProgress {
+  lastActivity?: ToolActivity;
+  usage: UsageStats;
+  elapsedMs: number;
+  startedAt: number;
+}
+
+export interface AsyncRunRecord {
+  schemaVersion: 1;
+  runId: string;
+  agent: string;
+  task: string;
+  status: AsyncRunStatus;
+  pid?: number;
+  pgid?: number;
+  paneId?: string;
+  sessionName?: string;
+  tmuxBinary?: string;
+  progress: RunProgress;
+  result?: SingleResult;
+  createdAt: string;
+  updatedAt: string;
+  backend: "native" | "tmux";
+}
+
 /** Aggregated token usage from a subagent run. */
 export interface UsageStats {
   input: number;
@@ -70,12 +103,15 @@ export interface SingleResult {
   contextError?: string;
   worktree?: WorktreeMetadata;
   terminal?: TerminalMetadata;
+  lastActivity?: ToolActivity;
+  asyncRunId?: string;
 }
 
 /** Metadata attached to every tool result for rendering. */
 export interface SubagentDetails {
   mode: "single" | "parallel";
   results: SingleResult[];
+  asyncRun?: AsyncRunRecord;
 }
 
 /** A display-friendly representation of a message part. */

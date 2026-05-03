@@ -1,4 +1,3 @@
-// subagent.ts
 import { execFile, spawn } from "child_process";
 import { appendFile, mkdir, open, readFile, writeFile, unlink } from "fs/promises";
 import { tmpdir } from "os";
@@ -11,6 +10,7 @@ import { emptyUsage, getFinalOutput } from "./types.js";
 import { createArtifactContext, readDeclaredFiles, readFilePrefix, type ArtifactContext } from "./artifacts.js";
 import { captureWorktreeDiff, cleanupWorktree, createWorktree, type WorktreeContext } from "./worktree.js";
 import { processPiJsonLine } from "./runner-events.js";
+import { getDefaultRegistry, type RunRegistry } from "./async-registry.js";
 import { getInheritedCliArgs } from "./runner-cli.js";
 import { getDefaultApprovalStore } from "./sandbox/approval-store.js";
 import { resolveSandboxLaunch } from "./sandbox/executor.js";
@@ -303,6 +303,7 @@ export function buildTmuxShellCommand(params: {
 export function buildTmuxLaunchEnv(env: Record<string, string | undefined>): Record<string, string | undefined> {
   const allowed = new Set([
     "PI_TEAM_WORKER",
+    "PI_AGENTIC_MICROCOMPACTION",
     "PI_SUBAGENT_ARTIFACT_DIR",
     "PI_SUBAGENT_OUTPUT_FILE",
     "PI_SUBAGENT_PROGRESS_FILE",
@@ -872,9 +873,19 @@ export async function runAgent(opts: RunAgentOptions): Promise<SingleResult> {
       let killTimer: ReturnType<typeof setTimeout> | undefined;
       let terminationStarted = false;
 
+      const HEARTBEAT_MS = 2000;
+      let heartbeat: ReturnType<typeof setInterval> | undefined;
+      if (onUpdate) {
+        heartbeat = setInterval(() => {
+          if (!didClose && !settled) emitUpdate();
+        }, HEARTBEAT_MS);
+        heartbeat.unref?.();
+      }
+
       const finish = (code: number) => {
         if (settled) return;
         settled = true;
+        if (heartbeat) clearInterval(heartbeat);
         if (graceTimer) clearTimeout(graceTimer);
         if (killTimer) clearTimeout(killTimer);
         if (signal && abortHandler) signal.removeEventListener("abort", abortHandler);
@@ -1108,4 +1119,63 @@ export async function runAgent(opts: RunAgentOptions): Promise<SingleResult> {
     if (tmpPromptPath) await unlink(tmpPromptPath).catch(() => {});
     await sandboxCleanup?.().catch(() => undefined);
   }
+}
+
+export interface SpawnAsyncResult {
+  runId: string;
+  status: "spawning" | "running";
+}
+
+export async function spawnAsync(
+  opts: RunAgentOptions,
+  registry: RunRegistry = getDefaultRegistry(),
+): Promise<SpawnAsyncResult> {
+  const abortController = new AbortController();
+  const runId = registry.register(
+    opts.agentName,
+    opts.task,
+    opts.executionMode === "tmux" ? "tmux" : "native",
+    abortController,
+  );
+
+  Promise.resolve().then(async () => {
+    const mergedOpts: RunAgentOptions = {
+      ...opts,
+      signal: abortController.signal,
+      onLifecycleEvent: (event) => {
+        if (event.phase === "spawned") {
+          registry.update(runId, {
+            pid: event.pid,
+            pgid: event.pgid,
+            status: "running",
+            paneId: event.paneId,
+            sessionName: event.sessionName,
+            tmuxBinary: event.tmuxBinary,
+          });
+        }
+        opts.onLifecycleEvent?.(event);
+      },
+      onUpdate: (partial) => {
+        const r = partial.details?.results?.[0];
+        if (r) {
+          registry.update(runId, {
+            progress: {
+              lastActivity: r.lastActivity,
+              usage: r.usage,
+            },
+          });
+        }
+        opts.onUpdate?.(partial);
+      },
+    };
+
+    try {
+      const result = await runAgent(mergedOpts);
+      registry.complete(runId, result.exitCode === 0 ? "completed" : "failed", result);
+    } catch {
+      registry.complete(runId, "failed");
+    }
+  });
+
+  return { runId, status: "spawning" };
 }

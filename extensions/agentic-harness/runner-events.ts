@@ -171,6 +171,17 @@ function processPiEvent(event: any, result: SingleResult): boolean {
       result.sawAgentEnd = true;
       return addAssistantMessages(result, event.messages) || changed;
     }
+    case "tool_start": {
+      if (typeof event.name === "string") {
+        result.lastActivity = {
+          name: event.name,
+          args: event.arguments || {},
+          timestamp: Date.now(),
+        };
+        return true;
+      }
+      return false;
+    }
     default:
       return false;
   }

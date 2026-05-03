@@ -7,7 +7,7 @@ import { homedir } from "os";
 import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import { discoverAgents, type SubagentContextMode } from "./agents.js";
-import { runAgent, mapWithConcurrencyLimit, MAX_CONCURRENCY, MAX_PARALLEL_TASKS, resolveDepthConfig, getCycleViolations } from "./subagent.js";
+import { runAgent, mapWithConcurrencyLimit, MAX_CONCURRENCY, MAX_PARALLEL_TASKS, resolveDepthConfig, getCycleViolations, spawnAsync } from "./subagent.js";
 import { emptyUsage, isResultError, isResultSuccess, getResultSummaryText, type SingleResult, type SubagentDetails } from "./types.js";
 import { renderCall, renderResult } from "./render.js";
 import { parsePlan } from "./plan-parser.js";
@@ -18,19 +18,27 @@ import { convertToLlm, serializeConversation } from "@mariozechner/pi-coding-age
 import { complete } from "@mariozechner/pi-ai";
 import { isDisciplineAgent, augmentAgentWithKarpathy, getSlopCleanerTask } from "./discipline.js";
 import { PlanProgressTracker } from "./plan-progress.js";
+import { MilestoneTracker, extractMilestoneId, isCompletionFilePath } from "./milestone-tracker.js";
+import type { MilestoneStatus } from "./milestone-tracker.js";
 import { WorkingVisibilityController } from "./working-visibility.js";
 import {
   completePlanSubagentTasks,
+  detectMilestonesFromToolResult,
+  extractPlanPathsFromArgs,
   getToolExecutionArgs,
+  loadMilestonesFromAssistantMessage,
   loadPlanFromAssistantMessageEnd,
   loadPlanFromToolResultEvent,
+  reconstructMilestoneProgressFromSessionEntries,
   reconstructPlanProgressFromSessionEntries,
   reloadPlanFromSubagentArgs,
   startPlanSubagentTasks,
+  subagentItemRecords,
 } from "./plan-progress-events.js";
 import { fetchUrlToMarkdown } from "./webfetch/utils.js";
 import { PI_ENABLE_TEAM_MODE_ENV, PI_TEAM_WORKER_ENV, cleanupActiveTeamTmuxResources, formatTeamRunSummary, runTeam, type TeamBackend, type TeamRunSummary } from "./team.js";
 import { defaultTeamRunStateRoot, listTeamRuns, readTeamRunRecord, writeTeamRunRecord, type StaleTaskResumeMode } from "./team-state.js";
+import { getDefaultRegistry } from "./async-registry.js";
 import { buildTeamCommandPrompt, getTeamArgumentCompletions, isTeamFollowUpCommand, parseTeamArgs } from "./team-command.js";
 import { renderWebfetchCall, renderWebfetchResult } from "./webfetch/render.js";
 import { getDefaultApprovalStore } from "./sandbox/approval-store.js";
@@ -55,14 +63,25 @@ let clarificationDone: boolean = false;
 const cacheStats: CacheStats = { totalInput: 0, totalCacheRead: 0 };
 const activeTools: ActiveTools = { running: new Map() };
 const planProgress = new PlanProgressTracker();
+const milestoneTracker = new MilestoneTracker();
 
 const PLAN_PROGRESS_CUSTOM_TYPE = "plan-progress";
+const MILESTONE_PROGRESS_CUSTOM_TYPE = "milestone-progress";
 
 function persistProgressSnapshot(ctx: { sessionManager?: any }): void {
-  if (!planProgress.hasPlan()) return;
-  ctx.sessionManager?.appendCustomEntry?.(PLAN_PROGRESS_CUSTOM_TYPE, {
-    taskStatuses: planProgress.getTaskStatuses(),
-  });
+  if (planProgress.hasPlan()) {
+    ctx.sessionManager?.appendCustomEntry?.(PLAN_PROGRESS_CUSTOM_TYPE, {
+      taskStatuses: planProgress.getTaskStatuses(),
+    });
+  }
+  if (milestoneTracker.hasMilestones()) {
+    const active = milestoneTracker.getActiveMilestone();
+    ctx.sessionManager?.appendCustomEntry?.(MILESTONE_PROGRESS_CUSTOM_TYPE, {
+      milestoneStatuses: milestoneTracker.getMilestoneStatuses(),
+      activeTasks: active?.tasks ?? null,
+      activeMilestoneId: active?.id ?? null,
+    });
+  }
 }
 
 const MICROCOMPACTION_ENV = "PI_AGENTIC_MICROCOMPACTION";
@@ -276,6 +295,11 @@ export default function (pi: ExtensionAPI) {
     worktree: Type.Optional(Type.Boolean({ description: "Run parallel tasks in isolated git worktrees and capture per-task diffs." })),
     planFile: Type.Optional(Type.String({ description: "Path to plan file. Required when agent is plan-validator — the validator prompt is built from this file, not from the task field." })),
     planTaskId: Type.Optional(Type.Number({ description: "Task number in the plan file to validate (e.g. 1 for Task 1). Required when agent is plan-validator." })),
+    async: Type.Optional(Type.Boolean({ description: "Execute in background, return runId immediately. Only works with single mode (agent + task)." })),
+    action: Type.Optional(stringEnum(["status", "interrupt"], {
+      description: 'Run management action. "status" lists or inspects runs; "interrupt" stops a run.',
+    })),
+    id: Type.Optional(Type.String({ description: "Run ID for status/interrupt actions." })),
   });
 
   type AgentScope = "user" | "project" | "both";
@@ -555,7 +579,72 @@ export default function (pi: ExtensionAPI) {
           requireApprovalForAllCommands: true,
         });
 
-        // Safety: cycle detection
+        if (params.action) {
+          const registry = getDefaultRegistry();
+          if (params.action === "status") {
+            if (params.id) {
+              const record = registry.getStatus(params.id);
+              if (!record) {
+                return {
+                  content: [{ type: "text" as const, text: `No run found with id: ${params.id}` }],
+                  details: undefined,
+                };
+              }
+              const statusText = [
+                `Run: ${record.runId}`,
+                `Agent: ${record.agent}`,
+                `Task: ${record.task}`,
+                `Status: ${record.status}`,
+                `Backend: ${record.backend}`,
+                record.pid ? `PID: ${record.pid}` : null,
+                `Elapsed: ${Math.round(record.progress.elapsedMs / 1000)}s`,
+                record.progress.lastActivity ? `Last tool: ${record.progress.lastActivity.name}` : null,
+                `Tokens: in=${record.progress.usage.input} out=${record.progress.usage.output}`,
+                record.result ? `Exit code: ${record.result.exitCode}` : null,
+              ].filter(Boolean).join("\n");
+              return {
+                content: [{ type: "text" as const, text: statusText }],
+                details: undefined,
+              };
+            }
+            const runs = registry.listActive();
+            if (runs.length === 0) {
+              return {
+                content: [{ type: "text" as const, text: "No active async runs." }],
+                details: undefined,
+              };
+            }
+            const statusText = runs.map(r =>
+              `${r.runId} [${r.status}] ${r.agent}: ${r.task.slice(0, 60)}${r.task.length > 60 ? "..." : ""} (${Math.round(r.progress.elapsedMs / 1000)}s)`
+            ).join("\n");
+            return {
+              content: [{ type: "text" as const, text: `Active runs (${runs.length}):\n${statusText}` }],
+              details: undefined,
+            };
+          }
+          if (params.action === "interrupt") {
+            if (!params.id) {
+              return {
+                content: [{ type: "text" as const, text: "Error: interrupt action requires id parameter." }],
+                details: undefined,
+                isError: true,
+              };
+            }
+            const success = registry.interrupt(params.id);
+            if (!success) {
+              return {
+                content: [{ type: "text" as const, text: `Failed to interrupt run ${params.id}. Run not found or not in a running state.` }],
+                details: undefined,
+                isError: true,
+              };
+            }
+            return {
+              content: [{ type: "text" as const, text: `Interrupt signal sent to run ${params.id}.` }],
+              details: undefined,
+            };
+          }
+        }
+
         if (depthConfig.preventCycles) {
           const requested: string[] = [];
           if (agent) requested.push(agent);
@@ -694,6 +783,14 @@ export default function (pi: ExtensionAPI) {
         }
 
         if (agent && task) {
+          if (params.async && (params.tasks || params.chain)) {
+            return {
+              content: [{ type: "text" as const, text: "Error: async mode only works with single mode (agent + task). Cannot combine with tasks or chain." }],
+              details: makeDetails("single")([]),
+              isError: true,
+            };
+          }
+
           let effectiveTask = task;
 
           // Validator information barrier: replace LLM-composed task with
@@ -708,6 +805,43 @@ export default function (pi: ExtensionAPI) {
               }
             } catch {
             }
+          }
+
+          if (params.async) {
+            const asyncAgent = isDisciplineAgent(agent)
+              ? augmentAgentWithKarpathy(findAgent(agent))
+              : findAgent(agent);
+            const registry = getDefaultRegistry();
+            const { runId } = await spawnAsync({
+              agent: asyncAgent,
+              agentName: agent,
+              task: effectiveTask,
+              cwd: cwd || defaultCwd,
+              depthConfig,
+              sandbox: sandboxFor(cwd || defaultCwd),
+              makeDetails: makeDetails("single"),
+              maxOutput,
+              output,
+              reads,
+              progress,
+              contextMode: context,
+            }, registry);
+            return {
+              content: [{ type: "text" as const, text: `Async run started: ${runId}` }],
+              details: {
+                ...makeDetails("single")([{
+                  agent,
+                  agentSource: "unknown" as const,
+                  task: effectiveTask,
+                  exitCode: 0,
+                  messages: [],
+                  stderr: "",
+                  usage: emptyUsage(),
+                  asyncRunId: runId,
+                }]),
+                asyncRun: registry.getStatus(runId),
+              },
+            };
           }
 
           const singleAgent = isDisciplineAgent(agent)
@@ -857,7 +991,22 @@ export default function (pi: ExtensionAPI) {
     workingVisibility?.restore();
     workingVisibility = null;
     sessionPlanPaths.clear();
+    getDefaultRegistry().abortAll();
     await cleanupActiveTeamTmuxResources();
+  });
+
+  const registry = getDefaultRegistry();
+  registry.setCompletionNotifier((record) => {
+    const statusEmoji = record.status === "completed" ? "✅" : record.status === "failed" ? "❌" : "⚠️";
+    const summary = record.result
+      ? `Exit code: ${record.result.exitCode}`
+      : `Status: ${record.status}`;
+    const elapsed = Math.round(record.progress.elapsedMs / 1000);
+    pi.sendUserMessage(
+      `${statusEmoji} Async subagent completed: ${record.agent} — ${record.task.slice(0, 80)}${record.task.length > 80 ? "..." : ""}\n` +
+      `Run: ${record.runId} | ${summary} | ${elapsed}s`,
+      { deliverAs: "followUp" },
+    );
   });
 
   pi.on("resources_discover", async (_event, _ctx) => {
@@ -945,7 +1094,6 @@ Do not start multi-step implementation without a clear understanding of what the
   pi.on("before_agent_start", async (event, _ctx) => {
     const isSkillInvocation = SKILL_INVOCATION_RE.test(event.prompt ?? "");
     const phaseGuidance = (isRootSession && !isSkillInvocation) ? PHASE_GUIDANCE[currentPhase] : "";
-    // Inject clarification priority guidance when idle and clarification not yet done
     const idleGuidance = (isRootSession && !isSkillInvocation && currentPhase === "idle" && !clarificationDone)
       ? CLARIFICATION_PRIORITY_GUIDANCE
       : "";
@@ -966,6 +1114,8 @@ Do not start multi-step implementation without a clear understanding of what the
   });
 
   pi.on("context", async (event, _ctx) => {
+    if (!isMicrocompactionEnabled()) return;
+
     const compacted = microcompactMessages(event.messages);
     const changed = compacted.some((msg, i) => msg !== event.messages[i]);
     if (!changed) return;
@@ -1115,6 +1265,24 @@ Do not start multi-step implementation without a clear understanding of what the
         input: event.input as Record<string, unknown> | undefined,
         content: event.content,
       }, ctx.cwd, sessionPlanPaths);
+    }
+
+    if (toolName === "read" || toolName === "write" || toolName === "edit") {
+      const detected = await detectMilestonesFromToolResult(milestoneTracker, {
+        toolName,
+        input: event.input as Record<string, unknown> | undefined,
+        content: event.content,
+      }, ctx.cwd);
+      const input = event.input as Record<string, unknown> | undefined;
+      const filePath = typeof input?.path === "string"
+        ? input.path
+        : typeof input?.file_path === "string"
+          ? input.file_path
+          : "";
+      if (detected && isCompletionFilePath(filePath)) {
+        planProgress.clear();
+        persistProgressSnapshot(ctx);
+      }
     }
 
     if (currentPhase === "idle") return;
@@ -1293,6 +1461,7 @@ Do not start multi-step implementation without a clear understanding of what the
 
       currentPhase = "planning";
       planProgress.clear();
+      milestoneTracker.clear();
       ctx.ui.setStatus("harness", "Agentic planning workflow in progress...");
 
       const topic = args?.trim() || "";
@@ -1320,6 +1489,7 @@ Do not start multi-step implementation without a clear understanding of what the
 
       currentPhase = "ultraplanning";
       planProgress.clear();
+      milestoneTracker.clear();
       ctx.ui.setStatus("harness", "Agentic milestone workflow in progress...");
 
       const topic = args?.trim() || "";
@@ -1550,6 +1720,7 @@ Do not start multi-step implementation without a clear understanding of what the
       currentPhase = "idle";
       activeGoalDocument = null;
       planProgress.clear();
+      milestoneTracker.clear();
       ctx.ui.setStatus("harness", undefined);
       ctx.ui.notify("Workflow phase reset to idle.", "info");
     },
@@ -1612,6 +1783,7 @@ Do not start multi-step implementation without a clear understanding of what the
     }
 
     await loadPlanFromAssistantMessageEnd(planProgress, event, ctx.cwd, sessionPlanPaths);
+    loadMilestonesFromAssistantMessage(milestoneTracker, event);
   });
 
   pi.on("tool_execution_start", async (event, ctx) => {
@@ -1625,6 +1797,24 @@ Do not start multi-step implementation without a clear understanding of what the
         const matchedTaskIds = startPlanSubagentTasks(planProgress, args);
         if (matchedTaskIds.length > 0) {
           planTaskIdsByToolCallId.set(event.toolCallId, matchedTaskIds);
+        }
+
+        const agentName = typeof args.agent === "string" ? args.agent : "";
+        const isPlanWorker = agentName === "plan-worker" || agentName === "plan-compliance";
+        const planPaths = extractPlanPathsFromArgs(args);
+        if (planPaths.length > 0) {
+          milestoneTracker.mergeFromPaths(planPaths);
+          if (isPlanWorker) {
+            for (const planPath of planPaths) {
+              const extracted = extractMilestoneId(planPath);
+              if (extracted) {
+                const milestone = milestoneTracker.getMilestone(extracted.id);
+                if (milestone && milestone.status === "pending") {
+                  milestoneTracker.startMilestone(extracted.id);
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -1640,6 +1830,29 @@ Do not start multi-step implementation without a clear understanding of what the
         completePlanSubagentTasks(planProgress, args, !(event.isError ?? false), matchedTaskIds);
         if (matchedTaskIds && matchedTaskIds.length > 0) {
           persistProgressSnapshot(ctx);
+        }
+
+        const success = !(event.isError ?? false);
+        const hasValidator = subagentItemRecords(args).some((item) => item.agent === "plan-validator");
+        if (hasValidator && planProgress.hasPlan()) {
+          const progress = planProgress.getProgress();
+          if (success && progress.completed === progress.total) {
+            const planPaths = extractPlanPathsFromArgs(args);
+            for (const planPath of planPaths) {
+              const extracted = extractMilestoneId(planPath);
+              if (extracted) {
+                milestoneTracker.completeMilestone(extracted.id, true);
+              }
+            }
+          } else if (!success) {
+            const planPaths = extractPlanPathsFromArgs(args);
+            for (const planPath of planPaths) {
+              const extracted = extractMilestoneId(planPath);
+              if (extracted) {
+                milestoneTracker.completeMilestone(extracted.id, false);
+              }
+            }
+          }
         }
       }
     }
@@ -1660,6 +1873,7 @@ Do not start multi-step implementation without a clear understanding of what the
     planTaskIdsByToolCallId.clear();
     sessionPlanPaths.clear();
     planProgress.clear();
+    milestoneTracker.clear();
     const branchEntries = ctx.sessionManager?.getBranch?.() ?? [];
     await reconstructPlanProgressFromSessionEntries(
       planProgress,
@@ -1667,6 +1881,51 @@ Do not start multi-step implementation without a clear understanding of what the
       ctx.cwd,
       sessionPlanPaths,
     );
+
+    // Reconstruct milestone state: prefer live state.md over stale snapshot
+    type MilestoneSnapshot = { milestoneStatuses?: Array<{ id: string; status: MilestoneStatus }>; activeTasks?: Array<{ name: string; done: boolean }> | null; activeMilestoneId?: string | null };
+
+    let lastMilestoneSnapshot: MilestoneSnapshot | null = null;
+    for (const entry of branchEntries) {
+      if (entry?.type === "custom" && entry?.customType === MILESTONE_PROGRESS_CUSTOM_TYPE && entry?.data) {
+        lastMilestoneSnapshot = entry.data as MilestoneSnapshot;
+      }
+    }
+
+    if (lastMilestoneSnapshot?.milestoneStatuses) {
+      for (const planPath of sessionPlanPaths) {
+        milestoneTracker.mergeFromPaths([planPath]);
+      }
+      milestoneTracker.restoreMilestoneStatuses(lastMilestoneSnapshot.milestoneStatuses as Array<{ id: string; status: MilestoneStatus }>);
+
+      if (lastMilestoneSnapshot.activeTasks && lastMilestoneSnapshot.activeMilestoneId) {
+        const target = milestoneTracker.getMilestone(lastMilestoneSnapshot.activeMilestoneId);
+        if (target) {
+          target.tasks = lastMilestoneSnapshot.activeTasks;
+        }
+      }
+    }
+
+    if (!milestoneTracker.hasMilestones()) {
+      for (const planPath of sessionPlanPaths) {
+        milestoneTracker.mergeFromPaths([planPath]);
+      }
+    }
+
+    // Replay milestone-bearing history after snapshots so explicit state.md/completion.md
+    // writes in the current branch override stale custom entries from before reload.
+    const milestoneReplay = await reconstructMilestoneProgressFromSessionEntries(
+      milestoneTracker,
+      branchEntries,
+      ctx.cwd,
+    );
+    if (milestoneReplay.sawCompletion) {
+      planProgress.clear();
+    }
+
+    // We do NOT scan the filesystem here to avoid picking up
+    // state.md/completion.md from OTHER harness sessions.
+
     workingVisibility?.restore();
     workingVisibility = new WorkingVisibilityController(
       planProgress,
@@ -1712,7 +1971,7 @@ Do not start multi-step implementation without a clear understanding of what the
         cwd: ctx.cwd,
         getModelName: () => ctx.model?.name,
         getContextUsage: () => ctx.getContextUsage(),
-      }, cacheStats, activeTools, planProgress, tui);
+      }, cacheStats, activeTools, planProgress, tui, milestoneTracker);
     });
 
     ctx.ui.notify(
