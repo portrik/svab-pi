@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.21.3](https://github.com/tmdgusya/roach-pi/compare/v1.21.2...v1.21.3) (2026-05-05)
+
+### Bug Fixes
+
+* stabilize macos process spawning ([539bf5f](https://github.com/tmdgusya/roach-pi/commit/539bf5f484f71d1c2de0d4ecf88063e3cc3a8d09))
+
+### Documentation
+
+* add deep-dive feature documentation pages ([38e3036](https://github.com/tmdgusya/roach-pi/commit/38e303663e9162e7e689b43ab71b1393335931dd))
+
 ## [1.21.2](https://github.com/tmdgusya/roach-pi/compare/v1.21.1...v1.21.2) (2026-05-03)
 
 ### Bug Fixes
