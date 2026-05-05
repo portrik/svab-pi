@@ -1108,6 +1108,7 @@ describe("No Global State File", () => {
         notify: vi.fn(),
       },
       model: { name: "test" },
+      modelRegistry: { getAvailable: () => [] },
       getContextUsage: () => undefined,
     } as any);
 
@@ -1133,6 +1134,7 @@ describe("No Global State File", () => {
       cwd: "/tmp/project",
       hasUI: true,
       model: { name: "test-model" },
+      modelRegistry: { getAvailable: () => [] },
       getContextUsage: () => ({ tokens: 1, contextWindow: 10, percent: 10 }),
       ui: {
         setHeader: vi.fn(),
@@ -1183,6 +1185,7 @@ describe("No Global State File", () => {
       },
       sessionManager: { getBranch: () => [] },
       model: { name: "test" },
+      modelRegistry: { getAvailable: () => [] },
       getContextUsage: () => undefined,
     } as any);
 
@@ -1241,6 +1244,7 @@ describe("No Global State File", () => {
         ],
       },
       model: { name: "test" },
+      modelRegistry: { getAvailable: () => [] },
       getContextUsage: () => undefined,
     } as any);
 
@@ -1250,7 +1254,7 @@ describe("No Global State File", () => {
       fg: (_color: string, text: string) => text,
       bold: (text: string) => text,
     } as any;
-    const footerData = { getGitBranch: () => undefined } as any;
+    const footerData = { getGitBranch: () => undefined, onBranchChange: () => () => {} } as any;
     const footer = footerFactory({ requestRender: vi.fn() }, theme, footerData);
     const rendered = footer.render(120).join("\n");
 
@@ -1286,6 +1290,7 @@ describe("No Global State File", () => {
       },
       sessionManager: mockSessionManager,
       model: { name: "test" },
+      modelRegistry: { getAvailable: () => [] },
       getContextUsage: () => undefined,
     } as any);
 
@@ -1355,6 +1360,7 @@ describe("No Global State File", () => {
       },
       sessionManager: mockSessionManager,
       model: { name: "test" },
+      modelRegistry: { getAvailable: () => [] },
       getContextUsage: () => undefined,
     } as any);
 
@@ -1375,7 +1381,7 @@ describe("No Global State File", () => {
     const footer = footerFactory({ requestRender: vi.fn() }, {
       fg: (_color: string, text: string) => text,
       bold: (text: string) => text,
-    } as any, { getGitBranch: () => undefined } as any);
+    } as any, { getGitBranch: () => undefined, onBranchChange: () => () => {} } as any);
     const rendered = footer.render(120).join("\n");
     expect(rendered).toContain("1/1");
     expect(rendered).toContain("✓ Persist validator completion");
@@ -1427,6 +1433,7 @@ describe("No Global State File", () => {
       },
       sessionManager: mockSessionManager,
       model: { name: "test" },
+      modelRegistry: { getAvailable: () => [] },
       getContextUsage: () => undefined,
     } as any);
 
@@ -1451,7 +1458,7 @@ describe("No Global State File", () => {
     const footer = footerFactory({ requestRender: vi.fn() }, {
       fg: (_color: string, text: string) => text,
       bold: (text: string) => text,
-    } as any, { getGitBranch: () => undefined } as any);
+    } as any, { getGitBranch: () => undefined, onBranchChange: () => () => {} } as any);
     const rendered = footer.render(120).join("\n");
     expect(rendered).toContain("0/1");
     expect(rendered).toContain("○ Should stay pending");

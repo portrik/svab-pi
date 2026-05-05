@@ -24,8 +24,8 @@ export function createWelcomeHeader(): HeaderFactory {
     ].map((line) => theme.bold(theme.fg("accent", line))).join("\n");
 
     const tagline = theme.fg("dim", "Engineering Discipline Extension");
-    const tipLine = theme.fg("muted", "Tip: Use /plan after clarifying; use /ultraplan for complex work.");
-    const clarifyLine = theme.fg("dim", "In most cases, start with /clarify.");
+    const tipLine = theme.fg("muted", "Tip: Always start with /clarify. Then use /plan or /ultraplan.");
+    const clarifyLine = theme.fg("dim", "Never skip /clarify — it prevents wasted effort.");
     const hints = [
       keyHint("app.interrupt", "to interrupt"),
       keyHint("app.clear", "to clear"),
