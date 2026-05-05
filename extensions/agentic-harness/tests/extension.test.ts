@@ -281,18 +281,25 @@ describe("Extension Registration", () => {
   });
 
   it("should register event handlers", () => {
-    const { mockPi, events } = createMockPi();
-    extension(mockPi);
+    const prev = process.env.PI_AGENTIC_SANDBOX_BASH;
+    process.env.PI_AGENTIC_SANDBOX_BASH = "1";
+    try {
+      const { mockPi, events } = createMockPi();
+      extension(mockPi);
 
-    expect(events.has("resources_discover")).toBe(true);
-    expect(events.has("before_agent_start")).toBe(true);
-    expect(events.has("session_start")).toBe(true);
-    expect(events.has("context")).toBe(true);
-    expect(events.has("session_before_compact")).toBe(true);
-    expect(events.has("session_compact")).toBe(true);
-    expect(events.has("tool_result")).toBe(true);
-    expect(events.has("tool_call")).toBe(true);
-    expect(events.has("user_bash")).toBe(true);
+      expect(events.has("resources_discover")).toBe(true);
+      expect(events.has("before_agent_start")).toBe(true);
+      expect(events.has("session_start")).toBe(true);
+      expect(events.has("context")).toBe(true);
+      expect(events.has("session_before_compact")).toBe(true);
+      expect(events.has("session_compact")).toBe(true);
+      expect(events.has("tool_result")).toBe(true);
+      expect(events.has("tool_call")).toBe(true);
+      expect(events.has("user_bash")).toBe(true);
+    } finally {
+      if (prev === undefined) delete process.env.PI_AGENTIC_SANDBOX_BASH;
+      else process.env.PI_AGENTIC_SANDBOX_BASH = prev;
+    }
   });
 
   it("should leave context unchanged by default", async () => {
