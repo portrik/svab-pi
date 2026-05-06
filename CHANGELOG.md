@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.1](https://github.com/tmdgusya/roach-pi/compare/v1.22.0...v1.22.1) (2026-05-06)
+
+### Bug Fixes
+
+* **footer:** re-add missing thinking:/💾 filter that was accidentally removed ([4c9ce33](https://github.com/tmdgusya/roach-pi/commit/4c9ce330aa621fb4c388c405364e8ebeb1dadff3))
+
+### Miscellaneous
+
+* bump version to 1.22.0 ([17d5d79](https://github.com/tmdgusya/roach-pi/commit/17d5d79941d19d98803369c3d8ca0b7e2067a457))
+* **harness:** sync agentic-harness lockfile version ([c41c6fe](https://github.com/tmdgusya/roach-pi/commit/c41c6fef5c5d66d4f87adca0ffafa80c03e97da9))
+
+### Tests
+
+* **harness:** set PI_AGENTIC_SANDBOX_BASH for user_bash handler check ([7b57fb9](https://github.com/tmdgusya/roach-pi/commit/7b57fb9494ec2c234aeb440cc3d25d80782918ac))
+
 ## [1.22.0](https://github.com/tmdgusya/roach-pi/compare/v1.21.4...v1.22.0) (2026-05-05)
 
 ### Features
