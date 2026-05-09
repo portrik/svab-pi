@@ -23,61 +23,48 @@
 ## Table of Contents
 
 - [What is ROACH PI?](#what-is-roach-pi)
-- [Highlights](#highlights)
+- [Architecture](#architecture)
 - [Installation](#installation)
-- [First 15 Minutes](#first-15-minutes)
-- [Feature Tour](#feature-tour)
-- [Commands](#commands)
-- [Tools](#tools)
+- [Quick Start](#quick-start)
+- [Clarify and Plan](#clarify-and-plan)
+- [Subagent Orchestration](#subagent-orchestration)
+- [Review Pipelines](#review-pipelines)
+- [FFF Search](#fff-search)
+- [LSP Code Intelligence](#lsp-code-intelligence)
+- [Workspace Memory](#workspace-memory)
+- [Session Loop](#session-loop)
+- [Autonomous Dev](#autonomous-dev-experimental)
+- [Nested AGENTS.md](#nested-agentsmd)
+- [Commands Reference](#commands-reference)
+- [Tools Reference](#tools-reference)
 - [Configuration](#configuration)
 - [Development](#development)
 - [Contributing](#contributing)
 - [License](#license)
 
+---
+
 ## What is ROACH PI?
 
 ROACH PI is an extension suite for the pi coding agent. It turns a normal coding session into a disciplined engineering loop:
 
-1. clarify ambiguous requests with focused questions,
-2. turn the clarified goal into an executable plan,
-3. dispatch specialized subagents to implement and verify work,
-4. run deep review pipelines before merging,
-5. preserve hard-won lessons in workspace memory.
+<p align="center">
+  <img src="assets/workflow-preview.svg" alt="ROACH PI workflow: clarify → plan → worker → validator" width="88%">
+</p>
 
 It is intentionally inspectable: commands, tools, hooks, agents, and skills are plain TypeScript and Markdown in this repository.
 
-## Highlights
+---
 
-### Agentic workflow discipline
+## Architecture
 
-- `/clarify` asks one context-aware question at a time and explores the codebase in parallel.
-- `/plan` turns the clarified scope into a concrete implementation plan.
-- Plan execution uses a compliance → worker → validator loop, so implementation and verification stay separated.
-- Structured progress tracking records milestones, plan tasks, and todos as durable state; the footer now reflects live `running` → `completed`/`failed` task transitions and can restore progress from structured session replay events.
-
-### Subagents and review fleets
-
-- `subagent` runs specialized pi subprocesses in single, parallel, or chain mode.
-- Async subagents can run in the background, declare when their answer is needed before the final response, and be waited on, inspected, or interrupted later by run id.
-- `/ultrareview` dispatches 10 independent reviewers, then verifies and synthesizes the findings.
-- Optional team mode can coordinate bounded worker batches with durable run state and tmux-backed panes.
-
-### Faster navigation and safer edits
-
-- FFF-backed `find`, `grep`, and `multi_grep` replace default search with git-aware ranking; `grep` and `multi_grep` also support pagination.
-- Bundled LSP tools provide diagnostics, definitions, references, symbols, and workspace rename.
-- Nested `AGENTS.md` injection gives the model local directory rules when it reads files.
-- Sandboxed bash approval can block or ask before sensitive shell execution.
-
-### Memory and autonomous operations
-
-- Workspace memory recalls prior decisions, bug fixes, and lessons in future related sessions.
-- `/loop` schedules recurring prompts such as health checks or status monitoring.
-- Experimental autonomous-dev mode can poll labeled GitHub issues and work them through an agentic pipeline.
+Seven bundled extensions, one disciplined engineering loop:
 
 <p align="center">
-  <img src="assets/workflow-preview.svg" alt="ROACH PI workflow preview" width="86%">
+  <img src="assets/architecture-overview.svg" alt="ROACH PI extension architecture showing all seven modules" width="88%">
 </p>
+
+---
 
 ## Installation
 
@@ -96,9 +83,11 @@ Restart `pi`, then run setup once:
 > [!WARNING]
 > If you have the `superpowers` skill installed, remove it before using ROACH PI. It can define skill names that collide with this extension's bundled skills, and pi does not guarantee extension override order for duplicate skills.
 
-## First 15 Minutes
+---
 
-Try the disciplined path on a real task:
+## Quick Start
+
+Try the disciplined path on a real task — from fuzzy idea to verified implementation in minutes:
 
 ```text
 /clarify Add a feature that exports review results as Markdown
@@ -110,20 +99,19 @@ After the context brief is clear:
 /plan
 ```
 
-Then ask the agent to run the plan. The intended execution pattern is:
+Then ask the agent to run the plan through the execution loop:
 
 ```text
 plan-compliance → plan-worker → plan-validator
 ```
 
-Before merging non-trivial changes, run one of the review commands:
+Before merging non-trivial changes, run a review:
 
 ```text
-/review
 /ultrareview
 ```
 
-Use the quick system checks when you need visibility:
+Quick system checks for visibility:
 
 ```text
 /fff-health
@@ -131,96 +119,161 @@ Use the quick system checks when you need visibility:
 /memory stats
 ```
 
-## Feature Tour
+---
 
-### 1. Clarification and planning
+## Clarify and Plan
 
-ROACH PI is built around the idea that vague requests should not become vague code. `/clarify` forces ambiguity into the open before implementation starts. It asks one focused question, offers concrete choices when useful, and explores relevant files with an `explorer` subagent in parallel.
+Vague requests should not become vague code.
 
-The output is a Context Brief. `/plan` then converts that brief into a task-by-task implementation plan with explicit files, steps, verification commands, and success criteria.
+**`/clarify`** forces ambiguity into the open before implementation starts. It asks one focused question, offers concrete choices when useful, and explores relevant files with an `explorer` subagent in parallel.
 
-### 2. Subagent orchestration
+The output is a **Context Brief** — a structured summary of the clarified scope, constraints, and affected files.
+
+**`/plan`** then converts that brief into a task-by-task implementation plan with:
+- explicit files to modify
+- step-by-step instructions
+- verification commands
+- success criteria
+
+Plan execution uses a **compliance → worker → validator** loop, so implementation and verification stay separated. Structured progress tracking records milestones, plan tasks, and todos as durable state — the footer reflects live `running` → `completed`/`failed` transitions and can restore progress from session replay.
+
+| Command | Purpose |
+|---|---|
+| `/clarify [topic]` | Resolve ambiguity with dynamic questions and parallel exploration |
+| `/plan [topic]` | Create an executable implementation plan |
+| `/ultraplan [topic]` | Break complex work into milestones using five planning reviewers |
+| `/reset-phase` | Clear active clarify/plan/ultraplan state |
+
+---
+
+## Subagent Orchestration
 
 The `subagent` tool delegates work to specialized agents running as separate `pi` processes.
+
+<p align="center">
+  <img src="assets/subagent-modes.svg" alt="ROACH PI subagent modes: single, parallel, chain, async" width="88%">
+</p>
 
 Supported modes:
 
 | Mode | Use it for |
 |---|---|
-| Single | One focused investigation or execution task. |
-| Parallel | Independent reviewers, explorers, or workers. |
-| Chain | Sequential pipelines where each step consumes the previous output. |
-| Async | Background tasks that can be waited on, checked, or interrupted by run id. Use `asyncDependency: "needed-before-final"` when the lead must join before finalizing. |
+| **Single** | One focused investigation or execution task |
+| **Parallel** | Independent reviewers, explorers, or workers |
+| **Chain** | Sequential pipelines where each step consumes the previous output |
+| **Async** | Background tasks that can be waited on, checked, or interrupted by run id |
 
-Bundled agents include `explorer`, `planner`, `worker`, `plan-compliance`, `plan-worker`, `plan-validator`, reviewer agents for feasibility/architecture/risk/dependency/user value, and review agents for bugs/security/performance/test coverage/consistency.
+Async subagents support `asyncDependency: "needed-before-final"` when the lead agent must join results before finalizing its response.
 
-### 3. Review pipelines
+---
 
-`/review` is a quick integrated review of a PR, branch, or local diff. `/ultrareview` is the deep pass:
+## Review Pipelines
 
-1. resolve the diff once,
-2. dispatch 10 reviewers in parallel,
-3. run `reviewer-verifier` to dedupe and filter false positives,
-4. run `review-synthesis`,
-5. save the final report under `docs/engineering-discipline/reviews/`.
+Two levels of review, one unified goal: catch problems before they ship.
+
+**`/review`** — quick integrated review of a PR, branch, or local diff.
+
+**`/ultrareview`** — the deep pass:
 
 <p align="center">
-  <img src="assets/review-search-preview.svg" alt="ROACH PI review, FFF, LSP, and memory preview" width="86%">
+  <img src="assets/review-search-preview.svg" alt="ROACH PI ultrareview pipeline: 10 reviewers → verifier → synthesis" width="88%">
 </p>
 
-### 4. FFF search
+1. resolve the diff once
+2. dispatch 10 reviewers in parallel
+3. run `reviewer-verifier` to dedupe and filter false positives
+4. run `review-synthesis`
+5. save the final report under `docs/engineering-discipline/reviews/`
 
-The bundled FFF extension upgrades pi's file and content search:
+| Command | Description |
+|---|---|
+| `/review [target]` | Quick single-pass review. Target can be omitted, PR number, PR URL, or branch |
+| `/ultrareview [target]` | Deep 10-reviewer pipeline with verifier and synthesis report |
 
-- `find` fuzzy-searches file names with frecency and git-aware ranking.
-- `grep` searches content with pagination and smart-case behavior.
-- `multi_grep` searches multiple literal patterns in one pass.
-- `@` file autocomplete can be replaced with FFF suggestions in `both` mode.
+---
 
-### 5. LSP code intelligence
+## FFF Search
 
-The bundled `pi-lsp-client` extension adds IDE-like operations:
+The bundled FFF extension upgrades pi's file and content search with git-aware ranking and frecency.
 
-- `lsp_diagnostics`
-- `lsp_goto_definition`
-- `lsp_find_references`
-- `lsp_symbols`
-- `lsp_prepare_rename`
-- `lsp_rename`
+<p align="center">
+  <img src="assets/fff-search-preview.svg" alt="ROACH PI FFF search: find, grep, multi_grep, @ autocomplete" width="88%">
+</p>
 
-It supports 40+ language server configs and provides `/lsp`, `/lsp status`, `/lsp install <serverId>`, and `/lsp warmup <serverId>`.
+- **`find`** — fuzzy file name search with frecency and git-aware ranking
+- **`grep`** — content search with pagination and smart-case behavior
+- **`multi_grep`** — multi-pattern OR search in one pass
+- **`@` autocomplete** — replace pi's default file picker with FFF suggestions (toggle with `/fff-mode both`)
 
-### 6. Workspace memory
+FFF is fallback-safe: if the native engine is unavailable, tools gracefully degrade to pi's default search.
 
-Workspace memory stores important findings as structured records under pi's agent directory, scoped by workspace. It can recall relevant records into future sessions and exposes:
+---
+
+## LSP Code Intelligence
+
+The bundled `pi-lsp-client` extension adds IDE-like operations directly inside pi sessions:
+
+- `lsp_diagnostics` — errors, warnings, and hints
+- `lsp_goto_definition` — jump to symbol definitions
+- `lsp_find_references` — find all usages across the workspace
+- `lsp_symbols` — document and workspace symbol search
+- `lsp_prepare_rename` — check if a rename is safe
+- `lsp_rename` — rename a symbol across the entire workspace
+
+Supports **40+ language server configs** out of the box.
 
 ```text
-/memory list
-/memory show <id>
-/memory save <text>
-/memory delete <id>
-/memory search <query>
-/memory stats
+/lsp              Open the LSP server inspector
+/lsp status       Print installed/available language server summary
+/lsp install <id> Run a whitelisted install recipe
+/lsp warmup <id>  Preload a language server for the workspace
 ```
 
-The LLM-callable `memory_save` tool is used after bug fixes, decisions, or useful discoveries.
+---
 
-### 7. Session loop
+## Workspace Memory
 
-`/loop` schedules recurring prompts inside the current session:
+<p align="center">
+  <img src="assets/lsp-memory-preview.svg" alt="ROACH PI LSP tools and workspace memory save/recall flow" width="88%">
+</p>
+
+Workspace memory stores important findings as structured records under pi's agent directory, scoped by workspace. It recalls relevant records into future sessions automatically.
+
+```text
+/memory list           List all memories
+/memory show <id>      Show a specific memory
+/memory save <text>    Save a new memory
+/memory delete <id>    Delete a memory
+/memory search <query> Search memories
+/memory stats          Show memory statistics
+```
+
+The LLM-callable `memory_save` tool is used after bug fixes, decisions, or useful discoveries — so the agent avoids repeating the same fixes.
+
+---
+
+## Session Loop
+
+**`/loop`** schedules recurring prompts inside the current session — useful for health checks, monitoring, or continuous verification:
 
 ```text
 /loop 5m check git status and report changes
 /loop 30s verify the dev server is running on port 3000
-/loop-list
-/loop-stop-all
 ```
 
 Jobs are session-scoped, error-isolated, timeout-protected, and cleaned up on shutdown.
 
-### 8. Autonomous dev engine experimental
+```text
+/loop-list           List active loop jobs
+/loop-stop [job-id]  Stop one loop job
+/loop-stop-all       Stop all loop jobs
+```
 
-Set `PI_AUTONOMOUS_DEV=1` to enable `/autonomous-dev`:
+---
+
+## Autonomous Dev (Experimental)
+
+Set `PI_AUTONOMOUS_DEV=1` to enable the GitHub issue engine:
 
 ```bash
 export PI_AUTONOMOUS_DEV=1
@@ -236,78 +289,86 @@ pi
 
 The engine polls issues labeled `autonomous-dev:ready`, tracks progress in the footer/widget, asks for clarification when needed, and uses existing agents to implement work.
 
-### 9. Nested `AGENTS.md`
+---
+
+## Nested `AGENTS.md`
 
 The bundled nested-agents extension injects nearby directory-level `AGENTS.md` files whenever the agent reads a file. This lets each subtree carry local conventions without forcing you to paste them into every prompt.
 
 ```text
-/nested-agents
-pi --no-nested-agents
+/nested-agents           Toggle the nested AGENTS.md context widget
+pi --no-nested-agents    Disable at startup
 ```
 
-## Commands
+---
+
+## Commands Reference
 
 ### Workflow
 
 | Command | Description |
 |---|---|
-| `/clarify [topic]` | Resolve ambiguity with dynamic questions and parallel exploration. |
-| `/plan [topic]` | Create an executable implementation plan. |
-| `/ultraplan [topic]` | Break complex work into milestones using five planning reviewers. |
-| `/reset-phase` | Clear active clarify/plan/ultraplan state. |
+| `/clarify [topic]` | Resolve ambiguity with dynamic questions and parallel exploration |
+| `/plan [topic]` | Create an executable implementation plan |
+| `/ultraplan [topic]` | Break complex work into milestones using five planning reviewers |
+| `/reset-phase` | Clear active clarify/plan/ultraplan state |
 
 ### Review
 
 | Command | Description |
 |---|---|
-| `/review [target]` | Quick single-pass review. Target can be omitted, PR number, PR URL, or branch. |
-| `/ultrareview [target]` | Deep 10-reviewer pipeline with verifier and synthesis report. |
+| `/review [target]` | Quick single-pass review (omit target, PR number, URL, or branch) |
+| `/ultrareview [target]` | Deep 10-reviewer pipeline with verifier and synthesis report |
 
-### Search, LSP, memory, and loops
-
-| Command | Description |
-|---|---|
-| `/fff-mode both\|tools-only` | Choose whether FFF powers both tools and `@` autocomplete or tools only. |
-| `/fff-health` | Show FFF native engine, index, git, and frecency status. |
-| `/fff-rescan` | Trigger an explicit FFF rescan. |
-| `/lsp` | Open the LSP server inspector. |
-| `/lsp status` | Print installed/available language server summary. |
-| `/lsp install <serverId>` | Run a whitelisted install recipe or show a manual hint. |
-| `/lsp warmup <serverId>` | Preload a language server for the workspace. |
-| `/memory ...` | Manage workspace memories. |
-| `/loop <interval> <prompt>` | Schedule recurring prompts. |
-| `/loop-list` | List active loop jobs. |
-| `/loop-stop [job-id]` | Stop one loop job. |
-| `/loop-stop-all` | Stop all loop jobs. |
-
-### Setup and experimental modes
+### Search, LSP, Memory
 
 | Command | Description |
 |---|---|
-| `/setup` / `/init` | Configure recommended settings, currently `quietStartup: true`. |
-| `/team ...` | Optional bounded team runner. Requires `PI_ENABLE_TEAM_MODE=1`. |
-| `/autonomous-dev ...` | Experimental GitHub issue engine. Requires `PI_AUTONOMOUS_DEV=1`. |
-| `/nested-agents` | Toggle nested `AGENTS.md` context widget. |
-| `/ask` | Manual smoke test for `ask_user_question`. |
+| `/fff-mode both\|tools-only` | Toggle FFF powering both tools and `@` autocomplete or tools only |
+| `/fff-health` | Show FFF engine, index, git, and frecency status |
+| `/fff-rescan` | Trigger an explicit FFF rescan |
+| `/lsp` | Open the LSP server inspector |
+| `/lsp status` | Print installed/available language server summary |
+| `/lsp install <serverId>` | Run a whitelisted install recipe or show a manual hint |
+| `/lsp warmup <serverId>` | Preload a language server for the workspace |
+| `/memory ...` | Manage workspace memories (list, show, save, delete, search, stats) |
+| `/loop <interval> <prompt>` | Schedule recurring prompts |
+| `/loop-list` | List active loop jobs |
+| `/loop-stop [job-id]` | Stop one loop job |
+| `/loop-stop-all` | Stop all loop jobs |
 
-## Tools
+### Setup and Experimental
+
+| Command | Description |
+|---|---|
+| `/setup` / `/init` | Configure recommended settings (`quietStartup: true`) |
+| `/team ...` | Optional bounded team runner (requires `PI_ENABLE_TEAM_MODE=1`) |
+| `/autonomous-dev ...` | Experimental GitHub issue engine (requires `PI_AUTONOMOUS_DEV=1`) |
+| `/nested-agents` | Toggle nested `AGENTS.md` context widget |
+| `/ask` | Manual smoke test for `ask_user_question` |
+
+---
+
+## Tools Reference
 
 | Tool | What it does |
 |---|---|
-| `ask_user_question` | Lets the agent ask focused multiple-choice or free-text clarification questions. |
-| `subagent` | Runs specialized agents in single, parallel, chain, or async modes. |
-| `webfetch` | Fetches web pages and converts them to Markdown with caching. |
-| `bash` | Sandboxed shell execution with optional approval policy. |
-| `find` | FFF-backed fuzzy file search. |
-| `grep` | FFF-backed content search with pagination. |
-| `multi_grep` | Multi-pattern OR content search. |
-| `memory_save` | Saves structured workspace memories. |
-| `team` | Optional team orchestration tool gated by `PI_ENABLE_TEAM_MODE=1`. |
-| `lsp_*` | Diagnostics, definitions, references, symbols, and rename. |
+| `ask_user_question` | Focused multiple-choice or free-text clarification questions |
+| `subagent` | Specialized agents in single, parallel, chain, or async modes |
+| `webfetch` | Fetch web pages and convert to Markdown with caching |
+| `bash` | Sandboxed shell execution with optional approval policy |
+| `find` | FFF-backed fuzzy file search |
+| `grep` | FFF-backed content search with pagination |
+| `multi_grep` | Multi-pattern OR content search |
+| `memory_save` | Save structured workspace memories |
+| `team` | Optional team orchestration (gated by `PI_ENABLE_TEAM_MODE=1`) |
+| `lsp_*` | Diiagnostics, definitions, references, symbols, and rename |
+
+---
 
 ## Configuration
 
-### Recommended startup
+### Recommended Startup
 
 ```jsonc
 // ~/.pi/agent/settings.json
@@ -318,7 +379,7 @@ pi --no-nested-agents
 
 `/setup` writes this for you.
 
-### FFF search mode
+### FFF Search Mode
 
 ```bash
 PI_FFF_MODE=both pi          # tools + @ autocomplete
@@ -332,22 +393,22 @@ Or change it live:
 /fff-mode tools-only
 ```
 
-### Team mode
+### Team Mode
 
 ```bash
 PI_ENABLE_TEAM_MODE=1 pi
 ```
 
-Team mode is disabled by default. It exposes the `team` tool and makes `/team` functional.
+Disabled by default. Exposes the `team` tool and makes `/team` functional.
 
-### Autonomous dev
+### Autonomous Dev
 
 ```bash
 PI_AUTONOMOUS_DEV=1 pi
-PI_AUTONOMOUS_DEV_LOG_PATH=~/.pi/autonomous-dev.log pi
+PI_AUTONOMOUS_LOG_PATH=~/.pi/autonomous-dev.log pi
 ```
 
-### Sandboxed bash approval
+### Sandboxed Bash Approval
 
 ```bash
 PI_SANDBOX_APPROVAL_MODE=ask pi      # ask before escalation
@@ -355,7 +416,7 @@ PI_SANDBOX_APPROVAL_MODE=always pi   # approve automatically
 PI_SANDBOX_APPROVAL_MODE=deny pi     # block escalation
 ```
 
-### LSP configuration
+### LSP Configuration
 
 Create project-local `.pi/lsp-client.json` or user-global `~/.pi/lsp-client.json`:
 
@@ -369,6 +430,8 @@ Create project-local `.pi/lsp-client.json` or user-global `~/.pi/lsp-client.json
   }
 }
 ```
+
+---
 
 ## Repository Layout
 
@@ -388,9 +451,11 @@ assets/                # README visuals
 
 Bundled package dependencies also include `pi-lsp-client` and `@code-yeongyu/pi-nested-agents-md`.
 
+---
+
 ## Development
 
-Install dependencies in the extension you are changing, then run that extension's tests and type checks. For example:
+Install dependencies in the extension you are changing, then run that extension's tests and type checks:
 
 ```bash
 npm --prefix extensions/agentic-harness install
@@ -401,27 +466,22 @@ npm --prefix extensions/agentic-harness run build
 For a broader local sweep, repeat the same pattern per extension:
 
 ```bash
-npm --prefix extensions/agentic-harness test
-npm --prefix extensions/agentic-harness run build
-
-npm --prefix extensions/fff-search test
-npm --prefix extensions/fff-search run build
-
-npm --prefix extensions/session-loop test
-npm --prefix extensions/session-loop run build
-
-npm --prefix extensions/workspace-memory test
-npm --prefix extensions/workspace-memory run build
-
-npm --prefix extensions/autonomous-dev test
-npm --prefix extensions/autonomous-dev run build
+npm --prefix extensions/agentic-harness test && npm --prefix extensions/agentic-harness run build
+npm --prefix extensions/fff-search test && npm --prefix extensions/fff-search run build
+npm --prefix extensions/session-loop test && npm --prefix extensions/session-loop run build
+npm --prefix extensions/workspace-memory test && npm --prefix extensions/workspace-memory run build
+npm --prefix extensions/autonomous-dev test && npm --prefix extensions/autonomous-dev run build
 ```
 
 There is no root `npm test` script in `package.json`; use the extension-level commands above.
 
+---
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). For larger changes, prefer the same discipline the extension enforces: clarify the goal, write a plan, implement in small steps, and verify with tests or a focused manual check.
+
+---
 
 ## License
 
