@@ -36,6 +36,10 @@ export interface AsyncRunRecord {
   createdAt: string;
   updatedAt: string;
   backend: "native" | "tmux";
+  retryAttempt?: number;
+  maxRetries?: number;
+  lastRetryAt?: string;
+  retryReason?: string;
 }
 
 /** Aggregated token usage from a subagent run. */

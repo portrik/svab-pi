@@ -3,7 +3,7 @@ import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { randomBytes } from "crypto";
 import { AutonomousDevOrchestrator } from "./orchestrator.js";
-import type { WorkerActivityCallback, WorkerResult } from "./types.js";
+import type { WorkerActivityCallback, WorkerResult, WorkerPidCallback } from "./types.js";
 import { getIssueWithComments, detectRepo } from "./github.js";
 import { loadAgentsFromDir, type AgentConfig } from "../agentic-harness/agents.js";
 import { runAgent, resolveDepthConfig, type RunLifecycleEvent } from "../agentic-harness/subagent.js";
@@ -377,6 +377,32 @@ export async function resolveWorkerAgentConfig(agent: AgentConfig): Promise<Agen
   return preferredModel === agent.model ? agent : { ...agent, model: preferredModel };
 }
 
+const SKIP_PREFLIGHT_ENV = "PI_AUTONOMOUS_SKIP_PREFLIGHT";
+
+export async function validateProviderReadiness(): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (process.env[SKIP_PREFLIGHT_ENV] === "1") {
+    return { ok: true };
+  }
+
+  const sessionModel = activeSessionContext?.model;
+  if (!sessionModel) {
+    return {
+      ok: false,
+      error: "No active model selected. Select a model or pass --model before starting /autonomous-dev.",
+    };
+  }
+
+  const auth = await activeSessionContext?.modelRegistry.getApiKeyAndHeaders(sessionModel);
+  if (!auth?.ok || !auth.apiKey) {
+    return {
+      ok: false,
+      error: `No API key found for ${sessionModel.provider}. Use /login or set an API key environment variable before starting /autonomous-dev.`,
+    };
+  }
+
+  return { ok: true };
+}
+
 function createWorkerRunId(issueNumber: number): string {
   return `autonomous-${issueNumber}-${Date.now()}-${randomBytes(4).toString("hex")}`;
 }
@@ -388,7 +414,8 @@ export function createAutonomousWorkerSpawner() {
     issueNumber: number,
     config: { repo: string },
     onActivity?: WorkerActivityCallback,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    onPid?: WorkerPidCallback
   ): Promise<WorkerResult> => {
     logAutonomousDev("info", "worker.issue_context.loading", {
       repo: config.repo,
@@ -453,6 +480,10 @@ export function createAutonomousWorkerSpawner() {
           parentPid: process.pid,
         },
       });
+      // Bridge PID to orchestrator for process tracking
+      if (event.pid && event.phase === "spawned") {
+        onPid?.(event.pid, event.pgid);
+      }
     };
 
     logAutonomousDev("info", "worker.run.started", {
@@ -558,6 +589,17 @@ export default function (pi: ExtensionAPI) {
             ctx.ui.notify("Error: No repo specified", "error");
             return;
           }
+
+          // Preflight: verify provider/model readiness before starting
+          const preflight = await validateProviderReadiness();
+          if (!preflight.ok) {
+            logAutonomousDev("error", "command.start.preflight_failed", {
+              message: preflight.error,
+            });
+            ctx.ui.notify(`Error: ${preflight.error}`, "error");
+            return;
+          }
+
           logAutonomousDev("info", "command.start", {
             repo,
             message: "Starting autonomous-dev via command",

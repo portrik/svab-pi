@@ -1,5 +1,5 @@
-import type { HarnessState, HarnessTodo } from "./harness-state.js";
-import { selectMilestoneSummary, selectTodosForOwner } from "./harness-state.js";
+import type { HarnessPlan, HarnessState, HarnessTodo } from "./harness-state.js";
+import { selectMilestoneSummary, selectPlanForMilestone, selectTodosForOwner } from "./harness-state.js";
 
 function markdownLines(lines: string[]): string {
   return `${lines.join("\n")}\n`;
@@ -27,6 +27,17 @@ function appendBulletList(lines: string[], values: string[], emptyText: string):
   }
 }
 
+function formatPlanTaskSummary(plan: HarnessPlan | undefined): string | undefined {
+  if (!plan) return undefined;
+  const completed = plan.tasks.filter((task) => task.status === "completed").length;
+  const failed = plan.tasks.filter((task) => task.status === "failed").length;
+  const running = plan.tasks.filter((task) => task.status === "running").length;
+  const parts = [`${completed}/${plan.tasks.length}`, plan.id];
+  if (running > 0) parts.push(`${running} running`);
+  if (failed > 0) parts.push(`${failed} failed`);
+  return parts.join(" · ");
+}
+
 export function renderHarnessStateMarkdown(state: HarnessState): string {
   const milestoneSummary = selectMilestoneSummary(state);
   const lines = [
@@ -40,13 +51,14 @@ export function renderHarnessStateMarkdown(state: HarnessState): string {
     "",
     "## Milestones",
     "",
-    "| ID | Name | Status | Dependencies | Attempts | Plan File | Review File |",
-    "| --- | --- | --- | --- | ---: | --- | --- |",
+    "| ID | Name | Status | Dependencies | Attempts | Plan File | Tasks | Review File |",
+    "| --- | --- | --- | --- | ---: | --- | --- | --- |",
   ];
 
   for (const milestone of milestoneSummary.items) {
+    const linkedPlan = selectPlanForMilestone(state, milestone);
     lines.push(
-      `| ${tableCell(milestone.id)} | ${tableCell(milestone.name)} | ${tableCell(milestone.status)} | ${tableCell(milestone.dependencies.join(", ") || undefined)} | ${tableCell(milestone.attempts)} | ${tableCell(milestone.planFile)} | ${tableCell(milestone.reviewFile)} |`,
+      `| ${tableCell(milestone.id)} | ${tableCell(milestone.name)} | ${tableCell(milestone.status)} | ${tableCell(milestone.dependencies.join(", ") || undefined)} | ${tableCell(milestone.attempts)} | ${tableCell(milestone.planFile)} | ${tableCell(formatPlanTaskSummary(linkedPlan))} | ${tableCell(milestone.reviewFile)} |`,
     );
   }
 

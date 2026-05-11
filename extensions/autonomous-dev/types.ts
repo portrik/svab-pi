@@ -44,6 +44,7 @@ export interface ActivityEntry {
 
 export type WorkerActivityCallback = (activity: string) => void;
 export type WorkerAbortSignal = AbortSignal | undefined;
+export type WorkerPidCallback = (pid: number, pgid?: number) => void;
 
 export type WorkerResult =
   | { status: "completed"; prUrl: string; summary: string }
@@ -59,6 +60,10 @@ export interface OrchestratorConfig {
   maxClarificationRounds: number;
   /** Branch prefix for autonomous dev branches (default: "autonomous/") */
   branchPrefix: string;
+  /** Recover orphaned in-progress locks on startup (default: true) */
+  staleLockRecovery: boolean;
+  /** Maximum time in ms a worker may run before being aborted (default: 600000 = 10 min) */
+  workerTimeoutMs: number;
 }
 
 export const DEFAULT_CONFIG: OrchestratorConfig = {
@@ -66,6 +71,8 @@ export const DEFAULT_CONFIG: OrchestratorConfig = {
   pollIntervalMs: 60_000,
   maxClarificationRounds: 3,
   branchPrefix: "autonomous/",
+  staleLockRecovery: true,
+  workerTimeoutMs: 600_000,
 };
 
 export interface TrackedIssue {

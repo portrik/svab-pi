@@ -315,3 +315,34 @@ describe("resolveWorkerAgentConfig: provider/id regression", () => {
     expect(result.error).toContain("No active model");
   });
 });
+
+describe("validateProviderReadiness: preflight check", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.useFakeTimers();
+    delete process.env.PI_AUTONOMOUS_DEV;
+    delete process.env.PI_AUTONOMOUS_SKIP_PREFLIGHT;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("returns error when no active model", async () => {
+    // activeSessionContext is null by default in tests
+    const { validateProviderReadiness } = await import("../index.js");
+    const result = await validateProviderReadiness();
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toContain("No active model");
+    }
+  });
+
+  it("returns ok when skip preflight env is set", async () => {
+    process.env.PI_AUTONOMOUS_SKIP_PREFLIGHT = "1";
+    const { validateProviderReadiness } = await import("../index.js");
+    const result = await validateProviderReadiness();
+    expect(result.ok).toBe(true);
+  });
+});

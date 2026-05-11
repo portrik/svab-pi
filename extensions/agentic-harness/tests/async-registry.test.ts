@@ -447,3 +447,36 @@ describe("RunRegistry durability", () => {
     }
   });
 });
+
+describe("async registry retry support", () => {
+  it("records retry attempts and updates fields", () => {
+    const registry = new RunRegistry();
+    const runId = registry.register("worker", "task", "native");
+
+    const ok = registry.recordRetry(runId, "transient network error", 2);
+    expect(ok).toBe(true);
+
+    const record = registry.getStatus(runId)!;
+    expect(record.retryAttempt).toBe(1);
+    expect(record.maxRetries).toBe(2);
+    expect(record.lastRetryAt).toBeTruthy();
+    expect(record.retryReason).toBe("transient network error");
+  });
+
+  it("rejects retry beyond max attempts", () => {
+    const registry = new RunRegistry();
+    const runId = registry.register("worker", "task", "native");
+
+    expect(registry.recordRetry(runId, "first", 2)).toBe(true);
+    expect(registry.recordRetry(runId, "second", 2)).toBe(true);
+    expect(registry.recordRetry(runId, "third", 2)).toBe(false);
+
+    const record = registry.getStatus(runId)!;
+    expect(record.retryAttempt).toBe(2);
+  });
+
+  it("returns false for non-existent run", () => {
+    const registry = new RunRegistry();
+    expect(registry.recordRetry("nonexistent", "reason", 2)).toBe(false);
+  });
+});

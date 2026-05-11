@@ -332,6 +332,52 @@ describe("harness-state", () => {
     expect(selectActiveMilestone(state)?.id).toBe("M2");
   });
 
+  it("selects the milestone plan matching planFile when replans exist", () => {
+    let state = createHarnessState({ runId: "run-1", title: "Run 1", now: START });
+    state = applyHarnessCommand(state, {
+      type: "upsert_milestone",
+      milestone: {
+        id: "M1",
+        name: "M1",
+        status: "executing",
+        planFile: "docs/plans/m1-v2.md",
+      },
+    }, { now: NEXT }).state;
+    state = applyHarnessCommand(state, {
+      type: "attach_plan",
+      plan: { id: "m1-v1", milestoneId: "M1", title: "Old Plan", goal: "Old", planFile: "docs/plans/m1-v1.md" },
+    }, { now: "2026-05-06T00:02:00.000Z" }).state;
+    state = applyHarnessCommand(state, {
+      type: "attach_plan",
+      plan: { id: "m1-v2", milestoneId: "M1", title: "New Plan", goal: "New", planFile: "docs/plans/m1-v2.md" },
+    }, { now: "2026-05-06T00:03:00.000Z" }).state;
+
+    expect(selectActivePlan(state)?.id).toBe("m1-v2");
+  });
+
+  it("matches milestone planFile across relative and absolute path spellings", () => {
+    let state = createHarnessState({ runId: "run-1", title: "Run 1", now: START });
+    state = applyHarnessCommand(state, {
+      type: "upsert_milestone",
+      milestone: {
+        id: "M1",
+        name: "M1",
+        status: "executing",
+        planFile: "./docs/plans/m1-v2.md",
+      },
+    }, { now: NEXT }).state;
+    state = applyHarnessCommand(state, {
+      type: "attach_plan",
+      plan: { id: "m1-v1", milestoneId: "M1", title: "Old Plan", goal: "Old", planFile: "docs/plans/m1-v1.md" },
+    }, { now: "2026-05-06T00:02:00.000Z" }).state;
+    state = applyHarnessCommand(state, {
+      type: "attach_plan",
+      plan: { id: "m1-v2", milestoneId: "M1", title: "New Plan", goal: "New", planFile: "/workspace/docs/plans/m1-v2.md" },
+    }, { now: "2026-05-06T00:03:00.000Z" }).state;
+
+    expect(selectActivePlan(state)?.id).toBe("m1-v2");
+  });
+
   it("selects active plan by active milestone and falls back to running tasks", () => {
     let state = createHarnessState({ runId: "run-1", title: "Run 1", now: START });
     for (const [id, status] of [

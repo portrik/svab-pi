@@ -48,8 +48,12 @@ import {
   writeHarnessStateSnapshot,
   createHarnessStateSnapshot,
 } from "./harness-storage.js";
-import { replayHarnessEvents, HARNESS_STATE_EVENT_CUSTOM_TYPE } from "./harness-events.js";
-import { createHarnessState } from "./harness-state.js";
+import {
+  extractHarnessReplayEventsFromSessionEntries,
+  HARNESS_STATE_EVENT_CUSTOM_TYPE,
+  restoreHarnessStateFromSnapshotAndEvents,
+} from "./harness-events.js";
+import { createHarnessState, selectActivePlan, type HarnessState } from "./harness-state.js";
 import { fetchUrlToMarkdown } from "./webfetch/utils.js";
 import { PI_ENABLE_TEAM_MODE_ENV, PI_TEAM_WORKER_ENV, cleanupActiveTeamTmuxResources, formatTeamRunSummary, runTeam, type TeamBackend, type TeamRunSummary } from "./team.js";
 import { defaultTeamRunStateRoot, listTeamRuns, readTeamRunRecord, writeTeamRunRecord, type StaleTaskResumeMode } from "./team-state.js";
@@ -173,6 +177,34 @@ const planTaskIdsByToolCallId = new Map<string, number[]>();
 const sessionPlanPaths = new Set<string>();
 let workingVisibility: WorkingVisibilityController | null = null;
 let harnessProgress: HarnessProgressProvider | null = null;
+const structuredTaskStatusLocks = new Map<string, Promise<void>>();
+
+function extractExplicitPlanTaskIdsFromArgs(args: unknown): number[] {
+  return [...new Set(subagentItemRecords(args)
+    .filter((item) => item.agent === "plan-compliance" || item.agent === "plan-worker" || item.agent === "plan-validator")
+    .map((item) => item.planTaskId)
+    .filter((planTaskId): planTaskId is number => typeof planTaskId === "number" && Number.isInteger(planTaskId))
+  )];
+}
+
+async function withStructuredTaskStatusLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const previous = structuredTaskStatusLocks.get(key) ?? Promise.resolve();
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const chained = previous.then(() => current, () => current);
+  structuredTaskStatusLocks.set(key, chained);
+  await previous.catch(() => undefined);
+  try {
+    return await fn();
+  } finally {
+    release();
+    if (structuredTaskStatusLocks.get(key) === chained) {
+      structuredTaskStatusLocks.delete(key);
+    }
+  }
+}
 
 type StringEnumSchema<T extends string> = TUnsafe<T> & {
   type: "string";
@@ -908,6 +940,7 @@ export default function (pi: ExtensionAPI) {
               return {
                 content: [{ type: "text" as const, text: `Chain failed at step ${i + 1}: ${result.errorMessage || "error"}\n\n${summary}` }],
                 details: makeDetails("single")(allResults),
+                isError: true,
               };
             }
             previousOutput = getResultSummaryText(result, maxOutput);
@@ -1490,15 +1523,14 @@ Do not start multi-step implementation without a clear understanding of what the
     if (toolName === "harness_milestone" || toolName === "harness_plan" || toolName === "harness_todo") {
       const input = event.input as Record<string, unknown> | undefined;
       const runId = typeof input?.runId === "string" ? input.runId : undefined;
+      const inputRootDir = typeof input?.rootDir === "string" ? input.rootDir : undefined;
       if (runId) {
         if (!harnessProgress) {
           harnessProgress = new HarnessProgressProvider();
         }
-        if (!harnessProgress.hasState()) {
-          harnessProgress.setRunId(runId);
-        } else {
-          harnessProgress.invalidate();
-        }
+        const current = harnessProgress.getRunIdentity();
+        const rootDir = inputRootDir ?? (current.runId === runId ? current.rootDir : undefined);
+        harnessProgress.setRun(runId, rootDir);
       }
     }
 
@@ -1999,33 +2031,33 @@ Do not start multi-step implementation without a clear understanding of what the
   ): Promise<void> {
     if (taskIds.length === 0 || !harnessProgress?.hasState()) return;
 
-    const rootDir = defaultHarnessStateRoot(ctx.cwd);
     const branchEntries = ctx.sessionManager?.getBranch?.() ?? [];
-    let runId: string | undefined;
-    for (const entry of branchEntries) {
-      if (entry?.type === "custom" && entry?.customType === HARNESS_STATE_EVENT_CUSTOM_TYPE && entry?.data) {
-        runId = (entry.data as any).runId;
-        break;
-      }
-    }
+    const latestEvent = extractHarnessReplayEventsFromSessionEntries(branchEntries).at(-1);
+    const runId = latestEvent?.runId;
+    const rootDir = latestEvent?.rootDir ?? harnessProgress?.getRunIdentity().rootDir ?? defaultHarnessStateRoot(ctx.cwd);
     if (!runId) return;
 
-    const snapshotPath = harnessStateSnapshotPath(rootDir, runId);
-    const snapshot = await readHarnessStateSnapshot(snapshotPath);
-    if (!snapshot) return;
+    await withStructuredTaskStatusLock(`${rootDir}\u0000${runId}`, async () => {
+      const snapshotPath = harnessStateSnapshotPath(rootDir, runId);
+      const snapshot = await readHarnessStateSnapshot(snapshotPath);
+      if (!snapshot) return;
 
-    const activePlan = selectStructuredPlanForPaths(snapshot.state, extractPlanPathsFromArgs(args));
-    if (!activePlan) return;
+      const activePlan = selectStructuredPlanForPaths(snapshot.state, extractPlanPathsFromArgs(args));
+      if (!activePlan) return;
+      const validTaskIds = taskIds.filter((taskId) => activePlan.tasks.some((task) => task.id === taskId));
+      if (validTaskIds.length === 0) return;
 
-    const result = applyStructuredPlanTaskStatusUpdates(snapshot.state, {
-      planId: activePlan.id,
-      taskIds,
-      status,
+      const result = applyStructuredPlanTaskStatusUpdates(snapshot.state, {
+        planId: activePlan.id,
+        taskIds: validTaskIds,
+        status,
+        rootDir,
+      });
+      await writeHarnessStateSnapshot(snapshotPath, createHarnessStateSnapshot(result.state));
+      for (const replayEvent of result.events) {
+        (ctx.sessionManager as any)?.appendCustomEntry?.(HARNESS_STATE_EVENT_CUSTOM_TYPE, replayEvent);
+      }
     });
-    await writeHarnessStateSnapshot(snapshotPath, createHarnessStateSnapshot(result.state));
-    for (const replayEvent of result.events) {
-      (ctx.sessionManager as any)?.appendCustomEntry?.(HARNESS_STATE_EVENT_CUSTOM_TYPE, replayEvent);
-    }
     harnessProgress.invalidate();
   }
 
@@ -2072,9 +2104,10 @@ Do not start multi-step implementation without a clear understanding of what the
         toolCallArgsById.set(event.toolCallId, args);
         await reloadPlanFromSubagentArgs(planProgress, args, ctx.cwd, sessionPlanPaths);
         const matchedTaskIds = startPlanSubagentTasks(planProgress, args);
-        if (matchedTaskIds.length > 0) {
-          planTaskIdsByToolCallId.set(event.toolCallId, matchedTaskIds);
-          await persistStructuredSubagentTaskStatuses(ctx, args, matchedTaskIds, "running");
+        const structuredTaskIds = matchedTaskIds.length > 0 ? matchedTaskIds : extractExplicitPlanTaskIdsFromArgs(args);
+        if (structuredTaskIds.length > 0) {
+          planTaskIdsByToolCallId.set(event.toolCallId, structuredTaskIds);
+          await persistStructuredSubagentTaskStatuses(ctx, args, structuredTaskIds, "running");
         }
 
         const startedMilestones = startMilestonesFromSubagentArgs(milestoneTracker, args);
@@ -2092,17 +2125,21 @@ Do not start multi-step implementation without a clear understanding of what the
       const args = getToolExecutionArgs(event, toolCallArgsById.get(event.toolCallId));
       if (args) {
         const matchedTaskIds = planTaskIdsByToolCallId.get(event.toolCallId);
-        const affectedTaskIds = completePlanSubagentTasks(planProgress, args, !(event.isError ?? false), matchedTaskIds);
+        const success = !(event.isError ?? false);
+        const affectedTaskIds = completePlanSubagentTasks(planProgress, args, success, matchedTaskIds);
+        const hasValidator = subagentItemRecords(args).some((item) => item.agent === "plan-validator");
+        const structuredTaskIds = affectedTaskIds.length > 0
+          ? affectedTaskIds
+          : (matchedTaskIds && matchedTaskIds.length > 0 ? matchedTaskIds : extractExplicitPlanTaskIdsFromArgs(args));
+        const shouldPersistStructuredCompletion = structuredTaskIds.length > 0;
         if (affectedTaskIds.length > 0) {
           persistProgressSnapshot(ctx);
-
-          // Runtime enforcement: also persist to structured state.
-          const taskStatus = !(event.isError ?? false) ? "completed" : "failed";
-          await persistStructuredSubagentTaskStatuses(ctx, args, affectedTaskIds, taskStatus);
+        }
+        if (shouldPersistStructuredCompletion) {
+          const taskStatus = success ? "completed" : "failed";
+          await persistStructuredSubagentTaskStatuses(ctx, args, structuredTaskIds, taskStatus);
         }
 
-        const success = !(event.isError ?? false);
-        const hasValidator = subagentItemRecords(args).some((item) => item.agent === "plan-validator");
         if (hasValidator && planProgress.hasPlan()) {
           const progress = planProgress.getProgress();
           if (success && progress.completed === progress.total) {
@@ -2147,32 +2184,32 @@ Do not start multi-step implementation without a clear understanding of what the
     const branchEntries = ctx.sessionManager?.getBranch?.() ?? [];
 
     // --- Structured-first session restore (M6) ---
-    // Detect structured state via HARNESS_STATE_EVENT_CUSTOM_TYPE entries.
+    // Detect structured state via validated HARNESS_STATE_EVENT_CUSTOM_TYPE entries.
     // If structured state exists, use it as the primary restore path.
     // Otherwise, fall back to legacy parser-derived reconstruction.
-    let structuredRunId: string | undefined;
-    for (const entry of branchEntries) {
-      if (entry?.type === "custom" && entry?.customType === HARNESS_STATE_EVENT_CUSTOM_TYPE && entry?.data) {
-        const data = entry.data as { runId?: string };
-        if (data.runId) {
-          structuredRunId = data.runId;
-          break;
-        }
-      }
-    }
+    let structuredRestore: { rootDir: string; state: HarnessState } | null = null;
+    const harnessEvents = extractHarnessReplayEventsFromSessionEntries(branchEntries);
+    const latestHarnessEvent = harnessEvents.at(-1);
+    const structuredRunId = latestHarnessEvent?.runId;
 
     if (structuredRunId) {
       // Primary path: load snapshot + replay structured events
-      const rootDir = defaultHarnessStateRoot(ctx.cwd);
+      const defaultRootDir = defaultHarnessStateRoot(ctx.cwd);
+      const rootDir = latestHarnessEvent?.rootDir ?? defaultRootDir;
       const snapshot = await readHarnessStateSnapshot(harnessStateSnapshotPath(rootDir, structuredRunId));
-      const events = branchEntries
-        .filter((e: any) => e?.type === "custom" && e?.customType === HARNESS_STATE_EVENT_CUSTOM_TYPE)
-        .map((e: any) => e.data)
-        .filter((d: any) => d && typeof d === "object");
-      const reconstructedState = replayHarnessEvents(
-        snapshot?.state ?? createHarnessState({ runId: structuredRunId, title: structuredRunId }),
-        events,
+      const matchingEvents = harnessEvents.filter((event) =>
+        event.runId === structuredRunId && (event.rootDir ?? defaultRootDir) === rootDir
       );
+      const reconstructedState = restoreHarnessStateFromSnapshotAndEvents(
+        snapshot,
+        createHarnessState({ runId: structuredRunId, title: structuredRunId }),
+        matchingEvents,
+      );
+      await writeHarnessStateSnapshot(
+        harnessStateSnapshotPath(rootDir, structuredRunId),
+        createHarnessStateSnapshot(reconstructedState),
+      );
+      structuredRestore = { rootDir, state: reconstructedState };
 
       // Populate milestone tracker from structured state
       if (reconstructedState.milestones.length > 0) {
@@ -2185,15 +2222,20 @@ Do not start multi-step implementation without a clear understanding of what the
       }
 
       // Populate plan tracker from structured state if a plan exists
-      const activePlan = reconstructedState.plans[0];
+      const activePlan = selectActivePlan(reconstructedState);
       if (activePlan && activePlan.tasks.length > 0) {
-        // Load plan markdown if available for display
+        let loadedPlanMarkdown = false;
         if (activePlan.planFile) {
           sessionPlanPaths.add(activePlan.planFile);
           try {
-            const planContent = await readFile(activePlan.planFile, "utf-8");
+            const planPath = resolve(ctx.cwd, activePlan.planFile);
+            const planContent = await readFile(planPath, "utf-8");
             planProgress.loadPlan(planContent);
-          } catch { /* plan file not found, skip */ }
+            loadedPlanMarkdown = true;
+          } catch { /* plan file not found; fall back to structured tasks */ }
+        }
+        if (!loadedPlanMarkdown) {
+          planProgress.loadStructuredPlan(activePlan);
         }
         planProgress.restoreTaskStatuses(
           activePlan.tasks.map((t) => ({ id: t.id, status: t.status === "skipped" ? "failed" : t.status })),
@@ -2259,14 +2301,10 @@ Do not start multi-step implementation without a clear understanding of what the
     const uiSettings = resolveAgenticUiSettings({ cwd: ctx.cwd });
 
     harnessProgress = new HarnessProgressProvider();
-    for (const entry of branchEntries) {
-      if (entry?.type === "custom" && entry?.customType === HARNESS_STATE_EVENT_CUSTOM_TYPE && entry?.data) {
-        const data = entry.data as { runId?: string };
-        if (data.runId) {
-          harnessProgress.setRunId(data.runId);
-          break;
-        }
-      }
+    if (structuredRestore) {
+      harnessProgress.hydrate(structuredRestore.state, structuredRestore.rootDir);
+    } else if (latestHarnessEvent?.runId) {
+      harnessProgress.setRun(latestHarnessEvent.runId, latestHarnessEvent.rootDir);
     }
 
     ctx.ui.setFooter((tui, theme, footerData) => {

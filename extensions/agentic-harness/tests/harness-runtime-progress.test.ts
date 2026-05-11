@@ -90,8 +90,28 @@ describe("runtime structured plan progress helpers", () => {
     expect(selected?.id).toBe("plan-2");
   });
 
-  it("falls back to first plan when no plan path matches", () => {
+  it("matches subagent plan paths across ./ and absolute path spellings", () => {
     const state = stateWithPlans();
+
+    const selected = selectStructuredPlanForPaths(state, ["/workspace/./docs/plans/two.md"]);
+
+    expect(selected?.id).toBe("plan-2");
+  });
+
+  it("does not fall back to the first plan when multiple plans are ambiguous", () => {
+    const state = stateWithPlans();
+
+    const selected = selectStructuredPlanForPaths(state, ["docs/plans/missing.md"]);
+
+    expect(selected).toBeUndefined();
+  });
+
+  it("allows single-plan fallback when no path matches", () => {
+    let state = createHarnessState({ runId: "run-1", title: "Runtime Progress" });
+    state = applyHarnessCommand(state, {
+      type: "attach_plan",
+      plan: { id: "plan-1", milestoneId: "M1", title: "Plan 1", goal: "First", planFile: "docs/plans/one.md" },
+    }).state;
 
     const selected = selectStructuredPlanForPaths(state, ["docs/plans/missing.md"]);
 

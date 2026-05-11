@@ -21,6 +21,15 @@ describe("skill docs reference structured harness tools", () => {
     expect(src).toContain("canonical structured state");
   });
 
+  it("agentic-long-run does not use markdown checkboxes or state.md as canonical recovery state", () => {
+    const src = readSkill("agentic-long-run");
+    expect(src).not.toContain("first unchecked task");
+    expect(src).not.toContain("checkboxes marked");
+    expect(src).not.toContain("Update state.md");
+    expect(src).not.toContain("Checkpoint files are the source of truth");
+    expect(src).toContain("do not use markdown checkboxes for recovery");
+  });
+
   it("agentic-long-run forbids main-agent direct task execution and requires structured task status", () => {
     const src = readSkill("agentic-long-run");
     expect(src).toContain("Do not execute plan tasks directly as the main agent");
@@ -35,6 +44,8 @@ describe("skill docs reference structured harness tools", () => {
     const src = readSkill("agentic-plan-crafting");
     expect(src).toContain("harness_plan");
     expect(src).toContain("define_tasks");
+    expect(src).not.toContain("syntax for progress tracking");
+    expect(src).toContain("canonical progress is stored with `harness_plan define_tasks`");
   });
 
   it("agentic-review-work references harness_milestone", () => {

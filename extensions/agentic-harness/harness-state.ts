@@ -1,3 +1,5 @@
+import path from "node:path";
+
 export const HARNESS_STATE_SCHEMA_VERSION = 1;
 
 export type HarnessRunStatus = "pending" | "running" | "completed" | "failed";
@@ -398,6 +400,45 @@ function sortedMilestones(state: HarnessState): HarnessMilestone[] {
   return [...state.milestones].sort(compareMilestonesByOrder);
 }
 
+function normalizePlanFileForMatch(planFile: string): string {
+  const normalized = path.posix.normalize(planFile.replace(/\\/g, "/"));
+  return normalized.startsWith("./") ? normalized.slice(2) : normalized;
+}
+
+function planFilesMatch(left: string, right: string): boolean {
+  const normalizedLeft = normalizePlanFileForMatch(left);
+  const normalizedRight = normalizePlanFileForMatch(right);
+  return normalizedLeft === normalizedRight
+    || normalizedLeft.endsWith(`/${normalizedRight}`)
+    || normalizedRight.endsWith(`/${normalizedLeft}`);
+}
+
+function comparePlansByUpdatedAtDescending(left: HarnessPlan, right: HarnessPlan): number {
+  const updated = right.updatedAt.localeCompare(left.updatedAt);
+  return updated !== 0 ? updated : right.id.localeCompare(left.id);
+}
+
+function latestPlan(plans: HarnessPlan[]): HarnessPlan | undefined {
+  return [...plans].sort(comparePlansByUpdatedAtDescending)[0];
+}
+
+export function selectPlanForMilestone(
+  state: HarnessState,
+  milestone: HarnessMilestone,
+): HarnessPlan | undefined {
+  const milestonePlans = state.plans.filter((plan) => plan.milestoneId === milestone.id);
+  if (milestonePlans.length === 0) return undefined;
+
+  if (milestone.planFile) {
+    const matchingPlan = milestonePlans.find(
+      (plan) => plan.planFile && planFilesMatch(plan.planFile, milestone.planFile!),
+    );
+    if (matchingPlan) return matchingPlan;
+  }
+
+  return latestPlan(milestonePlans);
+}
+
 export function selectMilestoneSummary(state: HarnessState): HarnessMilestoneSummary {
   const items = sortedMilestones(state);
   return {
@@ -417,18 +458,19 @@ export function selectActiveMilestone(state: HarnessState): HarnessMilestone | u
 }
 
 export function selectActivePlan(state: HarnessState): HarnessPlan | undefined {
-  const activeMilestoneIds = sortedMilestones(state)
+  const activeMilestones = sortedMilestones(state)
     .filter((milestone) =>
       milestone.status === "planning" || milestone.status === "executing" || milestone.status === "validating"
-    )
-    .map((milestone) => milestone.id);
-  for (const milestoneId of activeMilestoneIds) {
-    const plan = state.plans.find((candidate) => candidate.milestoneId === milestoneId);
+    );
+  for (const milestone of activeMilestones) {
+    const plan = selectPlanForMilestone(state, milestone);
     if (plan) {
       return plan;
     }
   }
-  return state.plans.find((plan) => plan.tasks.some((task) => task.status === "running")) ?? state.plans[0];
+
+  const runningPlans = state.plans.filter((plan) => plan.tasks.some((task) => task.status === "running"));
+  return latestPlan(runningPlans) ?? latestPlan(state.plans);
 }
 
 export function selectPlanSummary(state: HarnessState, planId?: string): HarnessPlanSummary {

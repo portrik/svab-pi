@@ -1,22 +1,38 @@
+import path from "node:path";
 import { createHarnessReplayEvent, type HarnessReplayEvent } from "./harness-events.js";
 import {
   applyHarnessCommand,
+  selectActiveMilestone,
+  selectPlanForMilestone,
   type HarnessPlan,
   type HarnessPlanTaskStatus,
   type HarnessState,
 } from "./harness-state.js";
 
 function normalizePathForMatch(filePath: string): string {
-  return filePath.replace(/\\/g, "/");
+  const normalized = path.posix.normalize(filePath.replace(/\\/g, "/"));
+  return normalized.startsWith("./") ? normalized.slice(2) : normalized;
+}
+
+function pathsMatch(left: string, right: string): boolean {
+  const normalizedLeft = normalizePathForMatch(left);
+  const normalizedRight = normalizePathForMatch(right);
+  return normalizedLeft === normalizedRight
+    || normalizedLeft.endsWith(`/${normalizedRight}`)
+    || normalizedRight.endsWith(`/${normalizedLeft}`);
 }
 
 export function selectStructuredPlanForPaths(
   state: HarnessState,
   planPaths: string[],
 ): HarnessPlan | undefined {
-  const normalizedPlanPaths = new Set(planPaths.map(normalizePathForMatch));
-  return state.plans.find((plan) => plan.planFile && normalizedPlanPaths.has(normalizePathForMatch(plan.planFile)))
-    ?? state.plans[0];
+  const exactMatch = state.plans.find((plan) => plan.planFile && planPaths.some((planPath) => pathsMatch(plan.planFile!, planPath)));
+  if (exactMatch) return exactMatch;
+
+  if (state.plans.length === 1) return state.plans[0];
+
+  const activeMilestone = selectActiveMilestone(state);
+  return activeMilestone ? selectPlanForMilestone(state, activeMilestone) : undefined;
 }
 
 export function applyStructuredPlanTaskStatusUpdates(
@@ -26,6 +42,7 @@ export function applyStructuredPlanTaskStatusUpdates(
     taskIds: number[];
     status: HarnessPlanTaskStatus;
     now?: string;
+    rootDir?: string;
   },
 ): { state: HarnessState; events: HarnessReplayEvent[] } {
   let currentState = state;
@@ -41,7 +58,7 @@ export function applyStructuredPlanTaskStatusUpdates(
       status: input.status,
       completedAt: input.status === "completed" || input.status === "failed" ? at : undefined,
       startedAt: input.status === "running" ? at : undefined,
-    }, { now: at });
+    }, { now: at, rootDir: input.rootDir });
     currentState = applyHarnessCommand(currentState, replayEvent.command, { now: replayEvent.at }).state;
     events.push(replayEvent);
   }

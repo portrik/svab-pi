@@ -109,8 +109,9 @@ function emitHarnessEvent(
   state: HarnessState,
   command: HarnessCommand,
   now?: string,
+  rootDir?: string,
 ): void {
-  const event = createHarnessReplayEvent(state, command, { now: now || isoNow() });
+  const event = createHarnessReplayEvent(state, command, { now: now || isoNow(), rootDir });
   ctx.sessionManager?.appendCustomEntry?.(HARNESS_STATE_EVENT_CUSTOM_TYPE, event);
 }
 
@@ -126,7 +127,7 @@ async function applyAndPersistFromLoadedState(
   return withHarnessStateMutationLock(runId, rootDir, async () => {
     const state = await loadHarnessState(runId, rootDir);
     const command = buildCommand(state);
-    const replayEvent = createHarnessReplayEvent(state, command);
+    const replayEvent = createHarnessReplayEvent(state, command, { rootDir });
     const result = applyHarnessCommand(state, command);
     await persistHarnessState(result.state, rootDir);
     ctx.sessionManager?.appendCustomEntry?.(HARNESS_STATE_EVENT_CUSTOM_TYPE, replayEvent);

@@ -581,6 +581,26 @@ describe("task status snapshot and recovery", () => {
     expect(t.hasPlan()).toBe(false);
   });
 
+  it("loads structured plan tasks without plan markdown", () => {
+    const t = new PlanProgressTracker();
+    t.loadStructuredPlan({
+      id: "plan-1",
+      milestoneId: "M1",
+      title: "Structured Plan",
+      goal: "Restore from state",
+      tasks: [
+        { id: 1, name: "Completed task", status: "completed", dependencies: [], files: ["a.ts"], testCommands: [], acceptanceCriteria: [], startedAt: undefined, completedAt: undefined },
+        { id: 2, name: "Running task", status: "running", dependencies: [], files: [], testCommands: [], acceptanceCriteria: [], startedAt: undefined, completedAt: undefined },
+      ],
+      createdAt: "2026-05-06T00:00:00.000Z",
+      updatedAt: "2026-05-06T00:00:00.000Z",
+    });
+
+    expect(t.hasPlan()).toBe(true);
+    expect(t.getGoal()).toBe("Restore from state");
+    expect(t.getProgress()).toMatchObject({ completed: 1, running: 1, total: 2 });
+  });
+
   it("demoteRunningToPending converts all running tasks to pending", () => {
     const t = trackerWithTasks();
     t.startTaskById(1);

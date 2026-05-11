@@ -5,6 +5,7 @@ import {
 } from "../harness-state.js";
 import {
   createHarnessReplayEvent,
+  extractHarnessReplayEventsFromSessionEntries,
   HARNESS_STATE_EVENT_CUSTOM_TYPE,
 } from "../harness-events.js";
 import {
@@ -103,6 +104,27 @@ describe("structured session replay", () => {
     const { replayHarnessEvents } = await import("../harness-events.js");
     const replayed = replayHarnessEvents(state, [event]);
     expect(replayed.milestones[0].status).toBe("completed");
+  });
+
+  it("extracts only valid structured replay events with rootDir metadata", () => {
+    let state = createHarnessState({ runId: "run-1", title: "Test" });
+    state = applyHarnessCommand(state, {
+      type: "upsert_milestone",
+      milestone: { id: "M1", name: "Milestone 1" },
+    }).state;
+    const event = createHarnessReplayEvent(state, {
+      type: "set_milestone_status",
+      id: "M1",
+      status: "completed",
+    }, { rootDir: "custom-root" });
+
+    const extracted = extractHarnessReplayEventsFromSessionEntries([
+      customEntry({ malformed: true }),
+      customEntry(event),
+    ]);
+
+    expect(extracted).toHaveLength(1);
+    expect(extracted[0].rootDir).toBe("custom-root");
   });
 
   it("handles empty session gracefully", () => {

@@ -6,6 +6,7 @@ export const HARNESS_STATE_EVENT_CUSTOM_TYPE = "harness-state-event";
 export interface HarnessReplayEvent {
   schemaVersion: 1;
   runId: string;
+  rootDir?: string;
   seq: number;
   at: string;
   command: HarnessCommand;
@@ -80,11 +81,12 @@ function isCommand(value: unknown): value is HarnessCommand {
 export function createHarnessReplayEvent(
   state: HarnessState,
   command: HarnessCommand,
-  options: { now?: string } = {},
+  options: { now?: string; rootDir?: string } = {},
 ): HarnessReplayEvent {
   return {
     schemaVersion: 1,
     runId: state.runId,
+    rootDir: options.rootDir,
     seq: state.eventSeq + 1,
     at: options.now || isoNow(),
     command,
@@ -95,6 +97,7 @@ export function isHarnessReplayEvent(value: unknown): value is HarnessReplayEven
   return isRecord(value)
     && value.schemaVersion === 1
     && typeof value.runId === "string"
+    && (value.rootDir === undefined || typeof value.rootDir === "string")
     && typeof value.seq === "number"
     && typeof value.at === "string"
     && isCommand(value.command);

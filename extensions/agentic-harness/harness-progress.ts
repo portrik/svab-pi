@@ -29,6 +29,8 @@ export class HarnessProgressProvider {
   private lastSpinnerUpdate = 0;
   private readonly SPINNER_INTERVAL_MS = PLAN_PROGRESS_SPINNER_MS;
   private reloadPromise: Promise<void> | null = null;
+  private reloadIdentity: string | null = null;
+  private reloadQueued = false;
 
   constructor(options?: { runId?: string; rootDir?: string }) {
     this.runId = options?.runId;
@@ -43,30 +45,75 @@ export class HarnessProgressProvider {
   }
 
   setRunId(runId: string): void {
+    const changed = this.runId !== runId;
     this.runId = runId;
+    if (changed) {
+      this.cachedState = null;
+    }
     this.invalidate();
   }
 
-  async reload(): Promise<void> {
-    if (this.reloadPromise) {
-      return this.reloadPromise;
+  setRun(runId: string, rootDir?: string): void {
+    const changed = this.runId !== runId || this.rootDir !== rootDir;
+    this.runId = runId;
+    this.rootDir = rootDir;
+    if (changed) {
+      this.cachedState = null;
     }
-    this.reloadPromise = this.doReload();
+    this.invalidate();
+  }
+
+  hydrate(state: HarnessState, rootDir?: string): void {
+    this.runId = state.runId;
+    this.rootDir = rootDir;
+    this.cachedState = state;
+    this.notifyChanged();
+  }
+
+  getRunIdentity(): { runId?: string; rootDir?: string } {
+    return { runId: this.runId, rootDir: this.rootDir };
+  }
+
+  async reload(): Promise<void> {
+    const identity = this.identityKey(this.runId, this.rootDir);
+    if (this.reloadPromise && this.reloadIdentity === identity) {
+      this.reloadQueued = true;
+      await this.reloadPromise;
+      if (this.reloadQueued && this.reloadIdentity === null && this.identityKey(this.runId, this.rootDir) === identity) {
+        this.reloadQueued = false;
+        return this.reload();
+      }
+      return;
+    }
+    this.reloadIdentity = identity;
+    this.reloadPromise = this.doReload(this.runId, this.rootDir);
     try {
       await this.reloadPromise;
     } finally {
-      this.reloadPromise = null;
+      if (this.reloadIdentity === identity) {
+        this.reloadPromise = null;
+        this.reloadIdentity = null;
+      }
     }
   }
 
-  private async doReload(): Promise<void> {
-    if (!this.runId) {
-      this.cachedState = null;
+  private identityKey(runId: string | undefined, rootDir: string | undefined): string {
+    return `${rootDir ?? ""}\u0000${runId ?? ""}`;
+  }
+
+  private async doReload(runId: string | undefined, rootDir: string | undefined): Promise<void> {
+    if (!runId) {
+      if (this.identityKey(this.runId, this.rootDir) === this.identityKey(runId, rootDir)) {
+        this.cachedState = null;
+      }
       return;
     }
-    const dir = this.rootDir ?? defaultHarnessStateRoot();
-    const path = harnessStateSnapshotPath(dir, this.runId);
+    const dir = rootDir ?? defaultHarnessStateRoot();
+    const path = harnessStateSnapshotPath(dir, runId);
     const snapshot = await readHarnessStateSnapshot(path);
+    if (this.identityKey(this.runId, this.rootDir) !== this.identityKey(runId, rootDir)) {
+      return;
+    }
     this.cachedState = snapshot?.state ?? null;
   }
 

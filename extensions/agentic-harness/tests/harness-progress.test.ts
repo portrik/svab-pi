@@ -135,6 +135,46 @@ describe("HarnessProgressProvider", () => {
     });
   });
 
+  it("switches run roots when setRun changes rootDir", async () => {
+    const firstRoot = await makeTempDir();
+    const secondRoot = await makeTempDir();
+    await seedState(firstRoot, "run-1");
+    await seedState(secondRoot, "run-2");
+    const provider = new HarnessProgressProvider({ runId: "run-1", rootDir: firstRoot });
+    await new Promise((r) => setTimeout(r, 50));
+
+    provider.setRun("run-2", secondRoot);
+    await new Promise((r) => setTimeout(r, 50));
+
+    const lines = provider.renderPlan(stubTheme(), 80).join("\n");
+    expect(provider.getRunIdentity()).toEqual({ runId: "run-2", rootDir: secondRoot });
+    expect(lines).toContain("Build the thing");
+  });
+
+  it("hydrates state without waiting for snapshot reload", async () => {
+    const rootDir = await makeTempDir();
+    let state = createHarnessState({ runId: "hydrated-run", title: "Hydrated" });
+    state = applyHarnessCommand(state, {
+      type: "upsert_milestone",
+      milestone: { id: "M1", name: "Milestone", status: "executing" },
+    }).state;
+    state = applyHarnessCommand(state, {
+      type: "attach_plan",
+      plan: { id: "plan-1", milestoneId: "M1", title: "Hydrated Plan", goal: "Hydrate now" },
+    }).state;
+    state = applyHarnessCommand(state, {
+      type: "define_plan_tasks",
+      planId: "plan-1",
+      tasks: [{ id: 1, name: "Hydrated Task", status: "running" }],
+    }).state;
+    const provider = new HarnessProgressProvider({ rootDir });
+
+    provider.hydrate(state, rootDir);
+
+    expect(provider.hasState()).toBe(true);
+    expect(provider.renderPlan(stubTheme(), 80).join("\n")).toContain("Hydrated Task");
+  });
+
   it("notifies change listeners on invalidate", async () => {
     const rootDir = await makeTempDir();
     await seedState(rootDir, "run-1");

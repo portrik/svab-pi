@@ -179,10 +179,127 @@ export function createDefaultTeamTasks(goal: string, workerCount?: number, agent
 }
 
 export function validateTeamTasks(tasks: TeamTask[]): void {
-  const blocked = tasks.find((task) => task.blockedBy.length > 0);
-  if (blocked) {
-    throw new Error(`blockedBy dependencies are not supported by the MVP parallel batch scheduler: ${blocked.id}`);
+  const taskIds = new Set(tasks.map((t) => t.id));
+
+  // Validate that all blockedBy references point to existing tasks
+  for (const task of tasks) {
+    for (const depId of task.blockedBy) {
+      if (!taskIds.has(depId)) {
+        throw new Error(`Task ${task.id} has blockedBy reference to non-existent task: ${depId}`);
+      }
+    }
   }
+
+  // Detect circular dependencies using DFS cycle detection
+  const visited = new Set<string>();
+  const inStack = new Set<string>();
+
+  function hasCycle(taskId: string): boolean {
+    if (inStack.has(taskId)) return true;
+    if (visited.has(taskId)) return false;
+    visited.add(taskId);
+    inStack.add(taskId);
+    const task = tasks.find((t) => t.id === taskId);
+    if (task) {
+      for (const depId of task.blockedBy) {
+        if (hasCycle(depId)) return true;
+      }
+    }
+    inStack.delete(taskId);
+    return false;
+  }
+
+  for (const task of tasks) {
+    if (hasCycle(task.id)) {
+      throw new Error(`Circular dependency detected involving task: ${task.id}`);
+    }
+  }
+}
+
+/**
+ * Compute the topological depth of each task based on its blockedBy dependencies.
+ * Tasks with no dependencies get depth 0. Returns a Map<taskId, depth>.
+ */
+export function computeTaskDepths(tasks: TeamTask[]): Map<string, number> {
+  const depths = new Map<string, number>();
+
+  function getDepth(taskId: string): number {
+    if (depths.has(taskId)) return depths.get(taskId)!;
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || task.blockedBy.length === 0) {
+      depths.set(taskId, 0);
+      return 0;
+    }
+    let maxDepDepth = 0;
+    for (const depId of task.blockedBy) {
+      maxDepDepth = Math.max(maxDepDepth, getDepth(depId));
+    }
+    const depth = maxDepDepth + 1;
+    depths.set(taskId, depth);
+    return depth;
+  }
+
+  for (const task of tasks) {
+    getDepth(task.id);
+  }
+  return depths;
+}
+
+/**
+ * Group tasks into execution batches by dependency depth.
+ * Batch 0 runs first (no deps), batch 1 runs after batch 0 completes, etc.
+ */
+export function scheduleBatches(tasks: TeamTask[]): TeamTask[][] {
+  const depths = computeTaskDepths(tasks);
+  const maxDepth = Math.max(0, ...Array.from(depths.values()));
+  const batches: TeamTask[][] = [];
+  for (let d = 0; d <= maxDepth; d++) {
+    const batch = tasks.filter((t) => depths.get(t.id) === d && t.status === "pending");
+    if (batch.length > 0) batches.push(batch);
+  }
+  return batches;
+}
+
+/**
+ * Execute batches sequentially, respecting blockedBy dependencies.
+ * Tasks whose dependencies failed are automatically marked as blocked.
+ * @param runTask - callback that executes a single task and returns its result
+ */
+async function runBatchesSequentially(
+  batches: TeamTask[][],
+  allRunnableTasks: TeamTask[],
+  record: TeamRunRecord,
+  now: () => string,
+  runTask: (task: TeamTask, batchIndex: number) => Promise<SingleResult>,
+): Promise<SingleResult[]> {
+  const results: SingleResult[] = [];
+  for (const batch of batches) {
+    const runnableInBatch = batch.filter((task) => task.status === "pending");
+    if (runnableInBatch.length === 0) continue;
+
+    // Check if any task in this batch has a failed/blocked dependency
+    for (const task of runnableInBatch) {
+      const depsFailed = task.blockedBy.some((depId) => {
+        const dep = allRunnableTasks.find((t) => t.id === depId);
+        return dep && (dep.status === "failed" || dep.status === "blocked");
+      });
+      if (depsFailed) {
+        const blockedAt = now();
+        task.status = "blocked";
+        task.updatedAt = blockedAt;
+        task.completedAt = blockedAt;
+        task.errorMessage = "Blocked by failed dependency";
+        record = recordTeamEvent(record, { type: "task_blocked", taskId: task.id, createdAt: blockedAt, message: task.errorMessage });
+      }
+    }
+
+    const executable = runnableInBatch.filter((task) => task.status === "pending");
+    if (executable.length === 0) continue;
+
+    const batchResults = await mapWithConcurrencyLimit(executable, MAX_CONCURRENCY, runTask);
+    results.push(...batchResults);
+  }
+  return results;
 }
 
 function isFollowUpCommand(opts: TeamRunOptions): boolean {
@@ -283,7 +400,7 @@ function createEvidence(tasks: TeamTask[], results: SingleResult[]): TeamVerific
     artifactRefs,
     worktreeRefs,
     notes: [
-      "MVP team mode uses dependency-free parallel-batch task records.",
+      "Team mode supports task dependencies via blockedBy with cycle detection and topological scheduling.",
       "Team mode persists durable command lifecycle records; inbox/outbox messages are audit history.",
       "Worker self-reported verification appears in each task result summary.",
     ],
@@ -657,12 +774,12 @@ export async function runTeam(opts: TeamRunOptions, runtime: TeamRuntime): Promi
   try {
     validateTeamTasks(tasks);
   } catch (err) {
-    const invalidDependency = tasks.find((task) => task.blockedBy.length > 0);
-    if (invalidDependency) {
-      invalidDependency.status = "blocked";
-      invalidDependency.updatedAt = now();
-      invalidDependency.errorMessage = err instanceof Error ? err.message : "MVP team mode only supports dependency-free parallel batches.";
-      record = recordTeamEvent(record, { type: "task_failed", taskId: invalidDependency.id, createdAt: invalidDependency.updatedAt, message: invalidDependency.errorMessage });
+    const invalidTask = tasks.find((task) => task.blockedBy.length > 0) ?? tasks[0];
+    if (invalidTask) {
+      invalidTask.status = "blocked";
+      invalidTask.updatedAt = now();
+      invalidTask.errorMessage = err instanceof Error ? err.message : "Task validation failed.";
+      record = recordTeamEvent(record, { type: "task_failed", taskId: invalidTask.id, createdAt: invalidTask.updatedAt, message: invalidTask.errorMessage });
     }
     const summary = synthesizeTeamRun(record.goal, tasks, [], opts.maxOutput, backendRequested, backendUsed);
     record = setTeamRunStatus(record, "failed", now(), summary);
@@ -674,6 +791,8 @@ export async function runTeam(opts: TeamRunOptions, runtime: TeamRuntime): Promi
   await persistIfEnabled(runtime, record);
 
   const runnableTasks = tasks.filter((task) => task.status === "pending");
+  const batches = scheduleBatches(tasks);
+  const hasBlockedBy = tasks.some((task) => task.blockedBy.length > 0);
   let tmuxSessionName: string | undefined;
   let tmuxPaneIdsToCleanup: string[] = [];
   let tmuxAttachedToCurrentClient = false;
@@ -799,99 +918,105 @@ export async function runTeam(opts: TeamRunOptions, runtime: TeamRuntime): Promi
       abortSignal.addEventListener("abort", handleAbort, { once: true });
     }
   }) : undefined;
-  const workerResultsPromise = mapWithConcurrencyLimit(runnableTasks, MAX_CONCURRENCY, async (task, index) => {
-    const startedAt = now();
-    task.status = "in_progress";
-    task.startedAt = task.startedAt || startedAt;
-    task.updatedAt = startedAt;
-    task.heartbeatAt = startedAt;
-    record = recordTeamEvent(record, { type: "task_started", taskId: task.id, createdAt: startedAt });
-    const assignmentPrompt = buildTeamWorkerPrompt(task, opts);
-    record = enqueueTeamCommand(record, {
-      taskId: task.id,
-      owner: task.owner,
-      body: assignmentPrompt,
-      createdAt: startedAt,
-    });
-    const command = record.commands.at(-1);
-    if (command) {
-      record = acknowledgeTeamCommand(record, command.id, { now: startedAt });
-      record = startTeamCommand(record, command.id, { now: startedAt });
-    }
-    record = recordTeamMessage(record, {
-      taskId: task.id,
-      from: "leader",
-      to: task.owner,
-      kind: "inbox",
-      body: assignmentPrompt,
-      createdAt: startedAt,
-      deliveredAt: startedAt,
-    });
-    await persistIfEnabled(runtime, record);
-    runtime.emitProgress?.(synthesizeTeamRun(record.goal, tasks, [], opts.maxOutput, backendRequested, backendUsed));
-    let heartbeat: ReturnType<typeof setInterval> | undefined;
-    const heartbeatMs = opts.heartbeatMs ?? 15_000;
-    if (heartbeatMs > 0) {
-      heartbeat = setInterval(() => {
-        const heartbeatAt = now();
-        task.heartbeatAt = heartbeatAt;
-        task.updatedAt = heartbeatAt;
-        record = recordTeamEvent(record, { type: "task_heartbeat", taskId: task.id, createdAt: heartbeatAt });
-        void persistIfEnabled(runtime, record);
-      }, heartbeatMs);
-      heartbeat.unref?.();
-    }
-    let result: SingleResult;
-    try {
-      result = await runtime.runTask({
-        task,
-        prompt: assignmentPrompt,
-        agent: runtime.findAgent?.(task.agent),
-        agentName: task.agent,
-        worktree: runWithWorktree,
-        maxOutput: opts.maxOutput,
-        extraEnv: {
-          [PI_TEAM_WORKER_ENV]: "1",
-          PI_SUBAGENT_MAX_DEPTH: "1",
-        },
-      }, index);
-    } finally {
-      if (heartbeat) clearInterval(heartbeat);
-    }
+  const workerResultsPromise = (async () => {
+    const executeTask = async (task: TeamTask, index: number): Promise<SingleResult> => {
+      const startedAt = now();
+      task.status = "in_progress";
+      task.startedAt = task.startedAt || startedAt;
+      task.updatedAt = startedAt;
+      task.heartbeatAt = startedAt;
+      record = recordTeamEvent(record, { type: "task_started", taskId: task.id, createdAt: startedAt });
+      const assignmentPrompt = buildTeamWorkerPrompt(task, opts);
+      record = enqueueTeamCommand(record, {
+        taskId: task.id,
+        owner: task.owner,
+        body: assignmentPrompt,
+        createdAt: startedAt,
+      });
+      const command = record.commands.at(-1);
+      if (command) {
+        record = acknowledgeTeamCommand(record, command.id, { now: startedAt });
+        record = startTeamCommand(record, command.id, { now: startedAt });
+      }
+      record = recordTeamMessage(record, {
+        taskId: task.id,
+        from: "leader",
+        to: task.owner,
+        kind: "inbox",
+        body: assignmentPrompt,
+        createdAt: startedAt,
+        deliveredAt: startedAt,
+      });
+      await persistIfEnabled(runtime, record);
+      runtime.emitProgress?.(synthesizeTeamRun(record.goal, tasks, [], opts.maxOutput, backendRequested, backendUsed));
+      let heartbeat: ReturnType<typeof setInterval> | undefined;
+      const heartbeatMs = opts.heartbeatMs ?? 15_000;
+      if (heartbeatMs > 0) {
+        heartbeat = setInterval(() => {
+          const heartbeatAt = now();
+          task.heartbeatAt = heartbeatAt;
+          task.updatedAt = heartbeatAt;
+          record = recordTeamEvent(record, { type: "task_heartbeat", taskId: task.id, createdAt: heartbeatAt });
+          void persistIfEnabled(runtime, record);
+        }, heartbeatMs);
+        heartbeat.unref?.();
+      }
+      let result: SingleResult;
+      try {
+        result = await runtime.runTask({
+          task,
+          prompt: assignmentPrompt,
+          agent: runtime.findAgent?.(task.agent),
+          agentName: task.agent,
+          worktree: runWithWorktree,
+          maxOutput: opts.maxOutput,
+          extraEnv: {
+            [PI_TEAM_WORKER_ENV]: "1",
+            PI_SUBAGENT_MAX_DEPTH: "1",
+          },
+        }, index);
+      } finally {
+        if (heartbeat) clearInterval(heartbeat);
+      }
 
-    const summarize = runtime.summarizeResult ?? getResultSummaryText;
-    task.resultSummary = summarize(result, opts.maxOutput);
-    const refs = taskRefs(result);
-    task.artifactRefs = refs.artifactRefs;
-    task.worktreeRefs = refs.worktreeRefs;
-    const completedAt = now();
-    if (command) {
-      record = isResultSuccess(result)
-        ? completeTeamCommand(record, command.id, { now: completedAt, resultSummary: task.resultSummary, artifactRefs: commandRefs(result) })
-        : failTeamCommand(record, command.id, { now: completedAt, errorMessage: result.errorMessage || result.stderr || `exitCode ${result.exitCode}` });
-    }
-    task.updatedAt = completedAt;
-    task.completedAt = completedAt;
-    record = recordTeamMessage(record, {
-      taskId: task.id,
-      from: task.owner,
-      to: "leader",
-      kind: isResultSuccess(result) ? "outbox" : "error",
-      body: task.resultSummary,
-      createdAt: completedAt,
-    });
-    if (isResultSuccess(result)) {
-      task.status = "completed";
-      record = recordTeamEvent(record, { type: "task_completed", taskId: task.id, createdAt: completedAt });
-    } else {
-      task.status = "failed";
-      task.errorMessage = result.errorMessage || result.stderr || `exitCode ${result.exitCode}`;
-      record = recordTeamEvent(record, { type: "task_failed", taskId: task.id, createdAt: completedAt, message: task.errorMessage });
-    }
-    await persistIfEnabled(runtime, record);
-    runtime.emitProgress?.(synthesizeTeamRun(record.goal, tasks, [result], opts.maxOutput, backendRequested, backendUsed));
-    return result;
-  });
+      const summarize = runtime.summarizeResult ?? getResultSummaryText;
+      task.resultSummary = summarize(result, opts.maxOutput);
+      const refs = taskRefs(result);
+      task.artifactRefs = refs.artifactRefs;
+      task.worktreeRefs = refs.worktreeRefs;
+      const completedAt = now();
+      if (command) {
+        record = isResultSuccess(result)
+          ? completeTeamCommand(record, command.id, { now: completedAt, resultSummary: task.resultSummary, artifactRefs: commandRefs(result) })
+          : failTeamCommand(record, command.id, { now: completedAt, errorMessage: result.errorMessage || result.stderr || `exitCode ${result.exitCode}` });
+      }
+      task.updatedAt = completedAt;
+      task.completedAt = completedAt;
+      record = recordTeamMessage(record, {
+        taskId: task.id,
+        from: task.owner,
+        to: "leader",
+        kind: isResultSuccess(result) ? "outbox" : "error",
+        body: task.resultSummary,
+        createdAt: completedAt,
+      });
+      if (isResultSuccess(result)) {
+        task.status = "completed";
+        record = recordTeamEvent(record, { type: "task_completed", taskId: task.id, createdAt: completedAt });
+      } else {
+        task.status = "failed";
+        task.errorMessage = result.errorMessage || result.stderr || `exitCode ${result.exitCode}`;
+        record = recordTeamEvent(record, { type: "task_failed", taskId: task.id, createdAt: completedAt, message: task.errorMessage });
+      }
+      await persistIfEnabled(runtime, record);
+      runtime.emitProgress?.(synthesizeTeamRun(record.goal, tasks, [result], opts.maxOutput, backendRequested, backendUsed));
+      return result;
+    };
+
+    return hasBlockedBy
+      ? runBatchesSequentially(batches, runnableTasks, record, now, executeTask)
+      : mapWithConcurrencyLimit(runnableTasks, MAX_CONCURRENCY, executeTask);
+  })();
 
   let results: SingleResult[];
   if (abortSummaryPromise) {

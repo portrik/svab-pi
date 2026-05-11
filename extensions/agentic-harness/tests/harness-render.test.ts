@@ -82,8 +82,8 @@ describe("harness-render", () => {
     expect(markdown).toContain("# Renderer Run");
     expect(markdown).toContain("- Run ID: `run-1`");
     expect(markdown).toContain("- Schema Version: 1");
-    expect(markdown).toContain("| M1 | Milestone 1 | executing | — | 0 | docs/m1-plan.md | — |");
-    expect(markdown).toContain("| M2 | Milestone 2 | completed | M1 | 1 | — | docs/m2-review.md |");
+    expect(markdown).toContain("| M1 | Milestone 1 | executing | — | 0 | docs/m1-plan.md | 0/1 · plan-1 · 1 running | — |");
+    expect(markdown).toContain("| M2 | Milestone 2 | completed | M1 | 1 | — | — | docs/m2-review.md |");
     expect(markdown).toContain("- Milestones Executing: 1");
     expectSingleTrailingNewline(markdown);
   });

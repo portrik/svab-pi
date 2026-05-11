@@ -14,7 +14,7 @@ Long-running execution must be **resumable, auditable, and fail-safe.** Every st
 ## Hard Gates
 
 1. **Milestones must exist before execution.** Either from `agentic-milestone-planning` skill or user-provided. Never generate milestones inline during execution.
-2. **State file must be updated before and after every milestone.** No in-memory-only state. If it's not on disk, it didn't happen.
+2. **Canonical structured state must be updated before and after every milestone.** Use `harness_milestone`, `harness_plan`, and `harness_todo`; rendered markdown is audit output only. If it is not in structured state, it didn't happen.
 3. **Each milestone must complete the full pipeline.** agentic-plan-crafting → agentic-run-plan → agentic-review-work. No shortcuts. No skipping agentic-review-work "because it looked fine."
 4. **Failed milestones block dependents.** If M2 depends on M1 and M1 fails review, M2 does not start. Period.
 5. **User confirmation required at gate points.** Before starting a new milestone phase (planning, execution, review), check if the user wants to continue, pause, or abort.
@@ -36,21 +36,21 @@ Long-running execution must be **resumable, auditable, and fail-safe.** Every st
 
 ## Input
 
-1. **Harness state directory path** — e.g., `docs/engineering-discipline/harness/<session-slug>/`
-2. The directory must contain `state.md` and `milestones/*.md` files
+1. **Structured harness run identity** — `runId` plus optional `rootDir`/`PI_HARNESS_STATE_ROOT`.
+2. Canonical state is loaded with `harness_milestone load` and `harness_plan load`; `state.md`, milestone markdown, and checkpoint markdown are rendered/audit artifacts only.
 
-If no state directory exists, ask the user if they want to run `agentic-milestone-planning` first.
+If no structured milestone state exists, ask the user if they want to run `agentic-milestone-planning` first.
 
 ## Process
 
 ### Phase 1: Load and Validate State
 
-1. Read `state.md` from the harness directory
-2. Read all milestone files from `milestones/`
+1. Load canonical milestone state with `harness_milestone load` using the run's `runId` and `rootDir`.
+2. For every milestone that has a `planFile`/plan id, load canonical task state with `harness_plan load`; do not infer task status from markdown checkboxes.
 3. Validate:
-   - All milestones referenced in state.md have corresponding files
-   - Dependency DAG is valid (no cycles, topological sort possible)
-   - No milestone is in an invalid state (e.g., "executing" without a plan file)
+   - All milestone dependencies in structured state form a valid DAG (no cycles, topological sort possible)
+   - No milestone is in an invalid state (e.g., `executing` without an attached structured plan)
+   - Dependent milestones only run after prerequisites are `completed`
 4. Determine current position:
    - Which milestones are completed?
    - Which milestones are ready to start (all dependencies met)?
@@ -171,7 +171,7 @@ Before starting a milestone:
    - Proceed to next milestone
 4. **If FAIL:**
    - Record review findings in execution log
-   - **Retry decision (based on `Attempts` counter in state.md, which persists across crashes):**
+   - **Retry decision (based on the structured milestone `attempts` counter from `harness_milestone load`, which persists across crashes):**
      - If Attempts == 1: return to Step 2-3 with review feedback (re-execute same plan)
      - If Attempts == 2: return to Step 2-2 (re-plan with review feedback as constraint)
      - If Attempts >= 3: set status to `failed`, stop, report to user
@@ -180,7 +180,7 @@ Before starting a milestone:
 
 After a milestone passes agentic-review-work but **before** writing the checkpoint, verify that the milestone's output integrates correctly with all previously completed milestones:
 
-1. **Run the project's highest-level verification** (from state.md's Verification Strategy or rediscover using agentic-plan-crafting's Verification Discovery order)
+1. **Run the project's highest-level verification** (from structured run metadata/rendered verification strategy, or rediscover using agentic-plan-crafting's Verification Discovery order)
 2. **Check cross-milestone interfaces:** If the completed milestone defines or consumes interfaces from predecessor milestones, verify they are compatible (function signatures match, API contracts hold, types align)
 
 **If integration check passes:** Proceed to checkpoint.
@@ -204,7 +204,7 @@ The milestone passed its own agentic-review-work (internal correctness) but brea
 3. **Escalate to user (after 2 failed attempts):**
    - Report: which milestones are involved, what integration boundary failed, what fixes were tried
    - Options: add corrective milestone, rollback to checkpoint, accept and continue (user acknowledges the integration gap)
-   - Log the user's decision in state.md execution log
+   - Log the user's decision in structured state and rendered audit artifacts
 
 #### Step 2-6: Checkpoint
 
@@ -267,7 +267,7 @@ When multiple milestones have all dependencies satisfied and no file conflicts:
 
 After all milestones are completed (including the Integration Verification Milestone from agentic-milestone-planning):
 
-1. Update state.md: set overall status to `completing`
+1. Update canonical structured state/rendered audit output to record overall status `completing`
 2. **Final E2E Gate:** Run the project's highest-level verification one final time on the fully integrated codebase
 3. **Run full test suite** for regression check
 4. **If Final E2E Gate fails:**
@@ -276,7 +276,7 @@ After all milestones are completed (including the Integration Verification Miles
    - Execute corrective milestone through the full pipeline (agentic-plan-crafting → agentic-run-plan → agentic-review-work)
    - Re-run E2E Gate after correction
    - If 2 corrective attempts fail: escalate to user with full diagnosis
-5. **If Final E2E Gate passes:** Update state.md: set overall status to `completed`
+5. **If Final E2E Gate passes:** update canonical structured state/rendered audit output to record overall status `completed`
 6. Generate completion summary:
 
 ```markdown
@@ -308,7 +308,7 @@ After all milestones are completed (including the Integration Verification Miles
 
 When resuming a paused or interrupted session:
 
-1. Read state.md to determine last known state
+1. Use `harness_milestone load` and `harness_plan load` to determine last known canonical state
 2. For each milestone, determine recovery action:
 
 | Last Status | Recovery Action |
@@ -321,8 +321,8 @@ When resuming a paused or interrupted session:
 | `failed` | Present failure to user; ask whether to retry or skip (see Skip Rules below) |
 | `skipped` | Skip (user previously chose to skip this milestone) |
 
-3. For `executing` milestones: check if tasks in the plan have checkboxes marked. Resume from the first unchecked task.
-4. Read the `Attempts` counter from state.md to determine retry budget remaining. Do not reset the counter on resume — it persists across crashes to prevent infinite retry loops.
+3. For `executing` milestones: use `harness_plan load` to find the first task whose structured status is not `completed`; do not use markdown checkboxes for recovery.
+4. Read the structured milestone `attempts` counter to determine retry budget remaining. Do not reset the counter on resume — it persists across crashes to prevent infinite retry loops.
 5. Present recovery plan to user before proceeding.
 
 ## Mid-Execution Correction
@@ -330,7 +330,7 @@ When resuming a paused or interrupted session:
 If execution reveals that a completed milestone's output is incorrect or a new milestone is needed:
 
 1. **Pause execution** — do not continue with dependent milestones
-2. **Log the discovery** in state.md execution log: what was found, which milestone triggered the discovery
+2. **Log the discovery** in canonical structured state/rendered audit output: what was found, which milestone triggered the discovery
 3. **User decision required:** present the situation and options:
    - **Add corrective milestone:** Create a new milestone definition (the user writes the goal and success criteria, or re-run agentic-milestone-planning for just the new scope). Insert it into the DAG with appropriate dependencies. Resume execution from the new milestone.
    - **Re-plan from a checkpoint:** Roll back to a completed milestone's checkpoint, mark subsequent milestones as `pending`, reset their `Attempts` to 0, and restart from that point.
@@ -366,10 +366,10 @@ If a single milestone's total active time (from planning start to review complet
 
 Long-running sessions will hit context window limits. Pi automatically compresses old messages (context compaction). The harness must be designed to survive this:
 
-1. **Never rely on conversation memory for state.** All state lives in `state.md` and milestone files on disk. If the context is compressed, the harness re-reads state files — no information is lost.
+1. **Never rely on conversation memory for state.** Canonical state lives in structured harness state (`state.json` plus replay events). If the context is compressed, reload with `harness_milestone load` and `harness_plan load` — no information is lost.
 2. **Each milestone is a fresh context boundary.** When starting a new milestone's agentic-plan-crafting, the worker subagent starts with a clean context. It receives only the milestone definition and completed predecessor context (see F8 contract) — not the full conversation history.
-3. **Checkpoint files are the source of truth.** If context is lost mid-milestone, recovery reads the checkpoint files, not compressed conversation summaries.
-4. **Avoid accumulating large inline state.** Do not build up a running summary of all milestones in the conversation. Instead, reference state.md and checkpoint files by path.
+3. **Checkpoint files are audit artifacts, not canonical state.** If context is lost mid-milestone, recovery reads structured state first and checkpoint files only for summarized predecessor context.
+4. **Avoid accumulating large inline state.** Do not build up a running summary of all milestones in the conversation. Instead, reference structured harness state and rendered audit artifacts by path.
 
 ## Rate Limit Handling
 
@@ -389,7 +389,7 @@ Long-running sessions will encounter rate limits. Pi has built-in retry with exp
 | Generating milestones inline instead of using agentic-milestone-planning | Milestones lack adversarial review; poor decomposition |
 | Skipping agentic-review-work for "simple" milestones | Undetected defects compound across milestones |
 | Continuing after a milestone fails | Dependent milestones build on broken foundation |
-| Not updating state.md between phases | Crash loses progress; cannot resume |
+| Not updating structured state between phases | Crash loses progress; cannot resume |
 | Modifying completed milestone files | Breaks checkpoint invariant; invalidates reviews |
 | Running parallel milestones without directory isolation | File conflicts corrupt both milestones |
 | Auto-retrying on rate limit | Wastes quota; user may prefer to wait |
@@ -400,7 +400,7 @@ Long-running sessions will encounter rate limits. Pi has built-in retry with exp
 
 ## Minimal Checklist
 
-- [ ] State directory exists with valid state.md and milestone files
+- [ ] Structured harness state exists and loads with `harness_milestone load`
 - [ ] Dependency DAG validated (no cycles)
 - [ ] Current position determined (fresh start or resume)
 - [ ] User confirmed continuation at session start

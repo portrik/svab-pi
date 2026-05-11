@@ -116,6 +116,7 @@ describe("harness_milestone execute", () => {
     expect(customEntries.length).toBe(1);
     expect(customEntries[0].type).toBe(HARNESS_STATE_EVENT_CUSTOM_TYPE);
     expect((customEntries[0].data as any).command.type).toBe("upsert_milestone");
+    expect((customEntries[0].data as any).rootDir).toBe(rootDir);
   });
 
   it("creates a milestone with explicit status and dependencies", async () => {

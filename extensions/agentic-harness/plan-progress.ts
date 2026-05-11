@@ -1,6 +1,7 @@
 import type { Theme } from "@mariozechner/pi-coding-agent";
 import { truncateToWidth } from "@mariozechner/pi-tui";
 import { parsePlan, type ParsedPlan, type PlanTask } from "./plan-parser.js";
+import type { HarnessPlan } from "./harness-state.js";
 
 export type TaskStatus = "pending" | "running" | "completed" | "failed";
 
@@ -99,6 +100,34 @@ export class PlanProgressTracker {
       ...t,
       status: "pending" as TaskStatus,
     }));
+    this.currentSpinnerFrame = 0;
+    this.lastSpinnerUpdate = Date.now();
+    this.notifyChanged();
+  }
+
+  loadStructuredPlan(plan: HarnessPlan): void {
+    this.plan = {
+      goal: plan.goal,
+      verificationCommand: "",
+      tasks: plan.tasks.map((task) => ({
+        id: task.id,
+        name: task.name,
+        dependencies: (task.dependencies ?? []).join(", "),
+        files: task.files ?? [],
+        testCommands: task.testCommands ?? [],
+        acceptanceCriteria: task.acceptanceCriteria ?? [],
+        isFinal: false,
+        fullStepsText: "",
+      })),
+    };
+    const statusById = new Map(plan.tasks.map((task) => [task.id, task.status]));
+    this.tasks = this.plan.tasks.map((task) => {
+      const status = statusById.get(task.id);
+      return {
+        ...task,
+        status: status === "completed" || status === "failed" || status === "running" ? status : "pending",
+      };
+    });
     this.currentSpinnerFrame = 0;
     this.lastSpinnerUpdate = Date.now();
     this.notifyChanged();

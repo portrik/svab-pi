@@ -140,3 +140,21 @@ Completed.
 - Integration: fast-forwarded local `main` from `edd10fe` to `290a420`
 - Push: `origin/main` updated to `290a420`
 
+
+---
+
+# Current: Structured Harness Resume/Task Loading Fix
+
+Done when:
+- [x] Active plan selection prefers milestone `planFile`, then latest plan for the milestone.
+- [x] Runtime structured task updates avoid unsafe first-plan fallback for ambiguous multi-plan states.
+- [x] Harness progress/session restore preserves `{ runId, rootDir }`, hydrates replayed state, and can switch runs.
+- [x] Milestone render includes linked plan/task progress summaries.
+- [x] Skill docs no longer describe markdown checkboxes/`state.md` as canonical progress or recovery state.
+- [x] Focused harness tests pass.
+
+## Review
+
+Implemented structured harness resume/task display fixes. Focused verification passed: `cd extensions/agentic-harness && mkdir -p node_modules/.tmp && TMPDIR=$PWD/node_modules/.tmp npm exec -- vitest run tests/harness-state.test.ts tests/harness-runtime-progress.test.ts tests/harness-render.test.ts tests/harness-progress.test.ts tests/session-replay.test.ts tests/harness-tools.test.ts tests/skill-docs.test.ts tests/parser-isolation.test.ts tests/footer.test.ts tests/e2e-structured-workflow.test.ts tests/plan-progress.test.ts` and `TMPDIR=$PWD/node_modules/.tmp npm exec -- vitest run tests/extension.test.ts`.
+
+Note: `npm test` currently fails in this checkout because extension-local dependencies such as `turndown`/`turndown-plugin-gfm` and local `vitest` binary are not installed; focused tests were run through `npm exec -- vitest`.

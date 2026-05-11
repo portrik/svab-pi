@@ -241,12 +241,16 @@ export class RoachFooter implements Component {
     this.tui?.requestRender();
   }
 
-  private updateSpinnerTimer() {
-    const has = (this.harnessProgress?.hasState() && this.harnessProgress?.hasRunningTasks())
+  private hasRunningPlanTasks(): boolean {
+    return (this.harnessProgress?.hasState() && this.harnessProgress?.hasRunningTasks())
       || (this.planProgress?.getProgress().running ?? 0) > 0;
+  }
+
+  private updateSpinnerTimer() {
+    const has = this.hasRunningPlanTasks();
     if (has && !this.spinnerTimer) {
       this.spinnerTimer = setInterval(() => {
-        if ((this.planProgress?.getProgress().running ?? 0) === 0) { this.updateSpinnerTimer(); return; }
+        if (!this.hasRunningPlanTasks()) { this.updateSpinnerTimer(); return; }
         this.tui?.requestRender();
       }, PLAN_PROGRESS_SPINNER_MS);
     } else if (!has && this.spinnerTimer) {

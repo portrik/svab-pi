@@ -20,6 +20,7 @@ import {
   resolveTeamWorktreePolicy,
   synthesizeTeamRun,
   validateTeamTasks,
+  scheduleBatches,
 } from "../team.js";
 
 afterEach(() => {
@@ -84,11 +85,68 @@ describe("buildTeamWorkerPrompt", () => {
 });
 
 describe("validateTeamTasks", () => {
-  it("rejects blockedBy dependencies in the MVP parallel-batch scheduler", () => {
+  it("rejects blockedBy reference to non-existent task", () => {
     const [task] = createDefaultTeamTasks("Goal", 1, "worker");
-    const invalid = [{ ...task, blockedBy: ["task-0"] }];
+    const invalid = [{ ...task, blockedBy: ["nonexistent-task"] }];
 
-    expect(() => validateTeamTasks(invalid)).toThrow(/blockedBy|dependencies|parallel batch/i);
+    expect(() => validateTeamTasks(invalid)).toThrow(/non-existent/);
+  });
+
+  it("rejects circular dependencies", () => {
+    const [t1, t2] = createDefaultTeamTasks("Goal", 2, "worker");
+    const cyclic = [
+      { ...t1, blockedBy: [t2.id] },
+      { ...t2, blockedBy: [t1.id] },
+    ];
+
+    expect(() => validateTeamTasks(cyclic)).toThrow(/circular/i);
+  });
+
+  it("accepts valid blockedBy references", () => {
+    const [t1, t2] = createDefaultTeamTasks("Goal", 2, "worker");
+    const valid = [
+      { ...t1, blockedBy: [] },
+      { ...t2, blockedBy: [t1.id] },
+    ];
+
+    expect(() => validateTeamTasks(valid)).not.toThrow();
+  });
+
+  it("accepts empty blockedBy (backward compatible)", () => {
+    const tasks = createDefaultTeamTasks("Goal", 3, "worker");
+
+    expect(() => validateTeamTasks(tasks)).not.toThrow();
+  });
+});
+
+describe("scheduleBatches", () => {
+  it("returns single batch when no dependencies", () => {
+    const tasks = createDefaultTeamTasks("Goal", 3, "worker");
+    const batches = scheduleBatches(tasks);
+    expect(batches).toHaveLength(1);
+    expect(batches[0]).toHaveLength(3);
+  });
+
+  it("schedules dependent tasks in separate batches", () => {
+    const [t1, t2, t3] = createDefaultTeamTasks("Goal", 3, "worker");
+    t3.blockedBy = [t1.id, t2.id];
+    const batches = scheduleBatches([t1, t2, t3]);
+    expect(batches).toHaveLength(2);
+    expect(batches[0].map((t) => t.id).sort()).toEqual([t1.id, t2.id].sort());
+    expect(batches[1].map((t) => t.id)).toEqual([t3.id]);
+  });
+
+  it("handles diamond dependency", () => {
+    const [t1, t2, t3, t4] = createDefaultTeamTasks("Goal", 4, "worker");
+    // Diamond: 1 → [2,3] → 4
+    t2.blockedBy = [t1.id];
+    t3.blockedBy = [t1.id];
+    t4.blockedBy = [t2.id, t3.id];
+    const batches = scheduleBatches([t1, t2, t3, t4]);
+    expect(batches).toHaveLength(3);
+    expect(batches[0].map((t) => t.id)).toEqual([t1.id]);
+    expect(batches[1].map((t) => t.id).sort()).toEqual([t2.id, t3.id].sort());
+    expect(batches[2].map((t) => t.id)).toEqual([t4.id]);
   });
 });
 
@@ -885,7 +943,7 @@ describe("runTeam", () => {
     expect(formatted).toContain("failed: true (task-1: verification failed)");
     expect(formatted).toContain("artifactRefs: .pi/team/task-1.md");
     expect(formatted).toContain("worktreeRefs: /tmp/team-task-1");
-    expect(formatted).toContain("MVP team mode uses dependency-free parallel-batch task records");
+    expect(formatted).toContain("Team mode supports task dependencies via blockedBy");
   });
 });
 

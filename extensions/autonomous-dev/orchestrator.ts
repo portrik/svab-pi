@@ -5,6 +5,7 @@ import {
   WorkerResult,
   WorkerActivityCallback,
   WorkerAbortSignal,
+  WorkerPidCallback,
   AUTONOMOUS_LABELS,
 } from "./types.js";
 import {
@@ -69,11 +70,15 @@ export class AutonomousDevOrchestrator {
   private trackedIssues: Map<number, TrackedIssueState> = new Map();
   private runToken = 0;
   private activeWorkerControllers: Map<number, AbortController> = new Map();
+  private activeWorkerPids: Map<number, { pid: number; pgid?: number }> = new Map();
+  private workQueue: number[] = [];
+  private dispatchInProgress = false;
   private workerSpawner: (
     issueNumber: number,
     config: OrchestratorConfig,
     onActivity?: WorkerActivityCallback,
-    signal?: WorkerAbortSignal
+    signal?: WorkerAbortSignal,
+    onPid?: WorkerPidCallback,
   ) => Promise<WorkerResult> = stubWorkerSpawn;
 
   constructor(config: Partial<OrchestratorConfig> = {}) {
@@ -136,13 +141,18 @@ export class AutonomousDevOrchestrator {
     this.status.recentActivities = recent.slice(0, 3);
   }
 
+  private staleLocksRecovered = false;
+
   start(): void {
     if (this.status.isRunning) return;
     this.status.isRunning = true;
     this.runToken++;
+    this.staleLocksRecovered = false;
+    this.workQueue = [];
+    this.dispatchInProgress = false;
     this.logEvent("engine.start", {
       message: "Starting autonomous-dev polling loop",
-      details: { pollIntervalMs: this.config.pollIntervalMs },
+      details: { pollIntervalMs: this.config.pollIntervalMs, staleLockRecovery: this.config.staleLockRecovery },
     });
     this.updateActivity("starting engine");
     void this.runPollCycle();
@@ -166,12 +176,116 @@ export class AutonomousDevOrchestrator {
     }
     this.activeWorkerControllers.clear();
     this.status.activeWorkerCount = 0;
+    this.staleLocksRecovered = false;
+    this.reapActiveWorkers();
+    this.workQueue = [];
+    this.dispatchInProgress = false;
+
+    // Clean up tracked processing issues that were not completed
+    const processingIssues = Array.from(this.trackedIssues.values()).filter(
+      (t) => t.state === "processing" || t.state === "clarifying"
+    );
+
     this.logEvent("engine.stop", {
       message: "Stopping autonomous-dev polling loop",
-      details: { trackedIssueCount: this.trackedIssues.size },
+      details: { trackedIssueCount: this.trackedIssues.size, processingIssues: processingIssues.length },
     });
     this.updateActivity("stopped");
     this.trackedIssues.clear();
+
+    // Fire-and-forget cleanup for in-progress issues
+    if (processingIssues.length > 0 && this.config.repo) {
+      this.cleanupTrackedIssues(processingIssues);
+    }
+  }
+
+  /**
+   * Best-effort cleanup: moves tracked processing issues to FAILED on GitHub.
+   * Fire-and-forget — does not block stop().
+   */
+  private async cleanupTrackedIssues(issues: TrackedIssueState[]): Promise<void> {
+    this.logEvent("stop.cleanup", {
+      level: "warn",
+      message: `Cleaning up ${issues.length} tracked issue(s) that were still processing`,
+      details: { issueNumbers: issues.map((i) => i.issueNumber) },
+    });
+    for (const tracked of issues) {
+      try {
+        await swapLabels(
+          this.config.repo,
+          tracked.issueNumber,
+          [AUTONOMOUS_LABELS.IN_PROGRESS, AUTONOMOUS_LABELS.NEEDS_CLARIFICATION],
+          [AUTONOMOUS_LABELS.FAILED]
+        );
+        await postComment(
+          this.config.repo,
+          tracked.issueNumber,
+          "⚠️ **Orchestrator stopped while processing.** This issue has been moved to `failed` for manual review or re-processing. Relabel as `autonomous-dev:ready` to retry."
+        );
+        this.logEvent("stop.cleanup.issue", {
+          level: "warn",
+          issueNumber: tracked.issueNumber,
+          issueTitle: tracked.title,
+          message: "Moved to failed due to orchestrator stop",
+        });
+      } catch (err) {
+        this.logEvent("stop.cleanup.failed", {
+          level: "error",
+          issueNumber: tracked.issueNumber,
+          issueTitle: tracked.title,
+          message: "Failed to clean up issue on stop",
+          details: { error: describeError(err) },
+        });
+      }
+    }
+  }
+
+  /**
+   * Best-effort SIGTERM → SIGKILL for tracked worker PIDs.
+   * Safe to call multiple times; no-ops if no PIDs are tracked.
+   */
+  private reapActiveWorkers(): void {
+    const pidEntries = Array.from(this.activeWorkerPids.values());
+    this.activeWorkerPids.clear();
+    if (pidEntries.length === 0) return;
+
+    this.logEvent("worker.reap", {
+      level: "warn",
+      message: `Reaping ${pidEntries.length} orphaned worker process(es)`,
+      details: { pids: pidEntries.map((e) => e.pid) },
+    });
+
+    for (const entry of pidEntries) {
+      const killTarget = process.platform !== "win32" && entry.pgid ? -entry.pgid : -entry.pid;
+      try {
+        process.kill(killTarget, "SIGTERM");
+        this.logEvent("worker.reap.sigterm", {
+          message: `Sent SIGTERM to ${entry.pgid ? `PGID ${entry.pgid}` : `PID ${entry.pid}`}`,
+          details: { pid: entry.pid, pgid: entry.pgid },
+        });
+      } catch (err: any) {
+        if (err?.code === "ESRCH") {
+          continue;
+        }
+        this.logEvent("worker.reap.sigterm_failed", {
+          level: "warn",
+          message: `SIGTERM failed for PID ${entry.pid}`,
+          details: { pid: entry.pid, error: describeError(err) },
+        });
+      }
+    }
+
+    const killTimer = setTimeout(() => {
+      for (const entry of pidEntries) {
+        const killTarget = process.platform !== "win32" && entry.pgid ? -entry.pgid : -entry.pid;
+        try {
+          process.kill(killTarget, "SIGKILL");
+        } catch {
+          // Already dead, good
+        }
+      }
+    }, 5000);
+    killTimer.unref?.();
   }
 
   getStatus(): OrchestratorStatus {
@@ -198,7 +312,8 @@ export class AutonomousDevOrchestrator {
       issueNumber: number,
       config: OrchestratorConfig,
       onActivity?: WorkerActivityCallback,
-      signal?: WorkerAbortSignal
+      signal?: WorkerAbortSignal,
+      onPid?: WorkerPidCallback,
     ) => Promise<WorkerResult>
   ): void {
     this.workerSpawner = spawner;
@@ -237,6 +352,13 @@ export class AutonomousDevOrchestrator {
       await this.pickupReadyIssues();
       await this.checkClarificationResponses();
 
+      if (runToken !== this.runToken) return;
+
+      if (this.config.staleLockRecovery && !this.staleLocksRecovered) {
+        await this.recoverStaleLocks();
+        this.staleLocksRecovered = true;
+      }
+
       this.status.lastPollCompletedAt = new Date().toISOString();
       this.status.lastPollSucceededAt = this.status.lastPollCompletedAt;
       this.status.lastError = null;
@@ -266,6 +388,88 @@ export class AutonomousDevOrchestrator {
       if (runToken !== this.runToken) return;
       this.updateActivity("error while polling GitHub");
       throw error;
+    }
+  }
+
+  private async recoverStaleLocks(): Promise<void> {
+    if (!this.config.staleLockRecovery || !this.config.repo) return;
+
+    this.logEvent("lock.recovery.started", {
+      message: "Scanning for orphaned in-progress locks",
+    });
+
+    try {
+      const inProgressIssues = await listIssuesByLabel(
+        this.config.repo,
+        AUTONOMOUS_LABELS.IN_PROGRESS,
+        []
+      );
+
+      if (inProgressIssues.length === 0) {
+        this.logEvent("lock.recovery.clean", {
+          message: "No orphaned in-progress issues found",
+        });
+        return;
+      }
+
+      this.updateActivity("recovering stale locks");
+
+      const orphaned = inProgressIssues.filter(
+        (issue) => !this.trackedIssues.has(issue.number)
+      );
+
+      if (orphaned.length === 0) {
+        this.logEvent("lock.recovery.all_tracked", {
+          message: "All in-progress issues are actively tracked",
+          details: { count: inProgressIssues.length },
+        });
+        return;
+      }
+
+      this.logEvent("lock.recovery.found", {
+        level: "warn",
+        message: `Found ${orphaned.length} orphaned in-progress issue(s)`,
+        details: { issueNumbers: orphaned.map((i) => i.number) },
+      });
+
+      for (const issue of orphaned) {
+        try {
+          await swapLabels(
+            this.config.repo,
+            issue.number,
+            [AUTONOMOUS_LABELS.IN_PROGRESS],
+            [AUTONOMOUS_LABELS.FAILED]
+          );
+          await postComment(
+            this.config.repo,
+            issue.number,
+            "⚠️ **Orphaned lock recovered:** This issue was marked `in-progress` but no active orchestrator owns it. It has been moved to `failed` for re-processing. Relabel as `autonomous-dev:ready` to retry."
+          );
+          this.logEvent("lock.recovered", {
+            level: "warn",
+            issueNumber: issue.number,
+            issueTitle: issue.title,
+            message: "Recovered orphaned in-progress lock",
+          });
+        } catch (err) {
+          this.logEvent("lock.recovery.failed", {
+            level: "error",
+            issueNumber: issue.number,
+            issueTitle: issue.title,
+            message: "Failed to recover orphaned lock",
+            details: { error: describeError(err) },
+          });
+        }
+      }
+
+      this.status.stats.totalFailed += orphaned.length;
+      this.status.stats.totalProcessed += orphaned.length;
+    } catch (error) {
+      this.logEvent("lock.recovery.error", {
+        level: "error",
+        message: "Stale lock recovery scan failed",
+        details: { error: describeError(error) },
+      });
     }
   }
 
@@ -313,7 +517,46 @@ export class AutonomousDevOrchestrator {
         lockedAt: new Date(),
       });
 
-      await this.spawnWorkerForIssue(issue.number);
+      this.workQueue.push(issue.number);
+      this.logEvent("issue.enqueued", {
+        issueNumber: issue.number,
+        issueTitle: issue.title,
+        message: "Issue enqueued for dispatch",
+        details: { queueLength: this.workQueue.length },
+      });
+    }
+
+    // Dispatch any queued work
+    this.dispatchNext();
+  }
+
+  /**
+   * Dispatch the next queued issue to a worker.
+   * Runs asynchronously — does not block the caller.
+   * Skips if already dispatching or if queue is empty.
+   */
+  private dispatchNext(): void {
+    while (this.workQueue.length > 0) {
+      if (this.dispatchInProgress) return;
+      const issueNumber = this.workQueue.shift()!;
+      // Skip if no longer tracked (e.g., stop was called)
+      if (!this.trackedIssues.has(issueNumber)) continue;
+
+      this.dispatchInProgress = true;
+      this.spawnWorkerForIssue(issueNumber)
+        .catch((err) => {
+          this.logEvent("dispatch.error", {
+            level: "error",
+            issueNumber,
+            message: "Unhandled error in dispatch chain",
+            details: { error: describeError(err) },
+          });
+        })
+        .finally(() => {
+          this.dispatchInProgress = false;
+          this.dispatchNext();
+        });
+      return;
     }
   }
 
@@ -326,14 +569,33 @@ export class AutonomousDevOrchestrator {
     this.activeWorkerControllers.set(issueNumber, controller);
     this.status.activeWorkerCount = this.activeWorkerControllers.size;
 
+    let workerTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+    let timedOut = false;
+    let timeoutStatsRecorded = false;
+
     try {
       const trackedTitle = tracked.title;
       this.logEvent("worker.started", {
         issueNumber,
         issueTitle: trackedTitle,
         message: "Launching autonomous worker",
+        details: { workerTimeoutMs: this.config.workerTimeoutMs },
       });
       this.updateActivity("processing issue", issueNumber, trackedTitle);
+
+      // Set up watchdog timeout
+      workerTimeoutTimer = setTimeout(() => {
+        if (controller.signal.aborted) return;
+        timedOut = true;
+        this.logEvent("worker.timeout", {
+          level: "error",
+          issueNumber,
+          issueTitle: trackedTitle,
+          message: `Worker exceeded timeout of ${this.config.workerTimeoutMs}ms, aborting`,
+        });
+        controller.abort();
+      }, this.config.workerTimeoutMs);
+
       const result = await this.workerSpawner(
         issueNumber,
         this.config,
@@ -346,15 +608,43 @@ export class AutonomousDevOrchestrator {
           });
           this.updateActivity(activity, issueNumber, trackedTitle);
         },
-        controller.signal
+        controller.signal,
+        (pid, pgid) => {
+          this.activeWorkerPids.set(issueNumber, { pid, pgid });
+          this.logEvent("worker.pid", {
+            issueNumber,
+            issueTitle: trackedTitle,
+            message: `Worker process started with PID ${pid}`,
+            details: { pid, pgid },
+          });
+        }
       );
 
+      if (workerTimeoutTimer) {
+        clearTimeout(workerTimeoutTimer);
+        workerTimeoutTimer = null;
+      }
+
       if (controller.signal.aborted || runToken !== this.runToken) {
-        this.logEvent("worker.aborted", {
-          issueNumber,
-          issueTitle: trackedTitle,
-          message: "Discarding worker result after stop or superseding run",
-        });
+        if (timedOut) {
+          // Worker was aborted due to timeout
+          tracked.state = "failed";
+          timeoutStatsRecorded = true;
+          this.status.stats.totalFailed++;
+          this.status.stats.totalProcessed++;
+          await postComment(
+            this.config.repo,
+            issueNumber,
+            `❌ **Timeout:** Worker exceeded the maximum runtime of ${Math.round(this.config.workerTimeoutMs / 1000)}s. The task may be too complex or stuck.`
+          );
+          await this.handleFailure(issueNumber);
+        } else {
+          this.logEvent("worker.aborted", {
+            issueNumber,
+            issueTitle: trackedTitle,
+            message: "Discarding worker result after stop or superseding run",
+          });
+        }
         return;
       }
 
@@ -370,6 +660,27 @@ export class AutonomousDevOrchestrator {
       });
       await this.handleWorkerResult(issueNumber, result);
     } catch (err) {
+      if (workerTimeoutTimer) {
+        clearTimeout(workerTimeoutTimer);
+        workerTimeoutTimer = null;
+      }
+
+      if (controller.signal.aborted && timedOut) {
+        // Worker threw after timeout abort — only record stats if not already done in try path
+        tracked.state = "failed";
+        if (!timeoutStatsRecorded) {
+          this.status.stats.totalFailed++;
+          this.status.stats.totalProcessed++;
+        }
+        await postComment(
+          this.config.repo,
+          issueNumber,
+          `❌ **Timeout:** Worker exceeded the maximum runtime of ${Math.round(this.config.workerTimeoutMs / 1000)}s.`
+        );
+        await this.handleFailure(issueNumber);
+        return;
+      }
+
       if (controller.signal.aborted || runToken !== this.runToken) {
         this.logEvent("worker.aborted", {
           issueNumber,
@@ -396,10 +707,15 @@ export class AutonomousDevOrchestrator {
       this.status.stats.totalProcessed++;
       await this.handleFailure(issueNumber);
     } finally {
+      if (workerTimeoutTimer) {
+        clearTimeout(workerTimeoutTimer);
+        workerTimeoutTimer = null;
+      }
       const active = this.activeWorkerControllers.get(issueNumber);
       if (active === controller) {
         this.activeWorkerControllers.delete(issueNumber);
       }
+      this.activeWorkerPids.delete(issueNumber);
       this.status.activeWorkerCount = this.activeWorkerControllers.size;
     }
   }

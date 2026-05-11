@@ -60,7 +60,7 @@ docs/engineering-discipline/plans/YYYY-MM-DD-<feature-name>.md
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **Worker note:** Execute this plan task-by-task using the agentic-run-plan skill or subagents. Each step uses checkbox (`- [ ]`) syntax for progress tracking.
+> **Worker note:** Execute this plan task-by-task using the agentic-run-plan skill or subagents. Checkbox (`- [ ]`) syntax is rendered task formatting only; canonical progress is stored with `harness_plan define_tasks` and `harness_plan set_task_status`.
 
 **Goal:** [One sentence describing what this plan builds]
 

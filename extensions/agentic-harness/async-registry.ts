@@ -75,6 +75,10 @@ export class RunRegistry {
     completedAt?: string;
     progress?: Partial<RunProgress>;
     result?: SingleResult;
+    retryAttempt?: number;
+    maxRetries?: number;
+    lastRetryAt?: string;
+    retryReason?: string;
   }): void {
     const entry = this.runs.get(runId);
     if (!entry) return;
@@ -94,6 +98,10 @@ export class RunRegistry {
       entry.record.progress = { ...entry.record.progress, ...patch.progress };
     }
     if (patch.result) entry.record.result = patch.result;
+    if (patch.retryAttempt !== undefined) entry.record.retryAttempt = patch.retryAttempt;
+    if (patch.maxRetries !== undefined) entry.record.maxRetries = patch.maxRetries;
+    if (patch.lastRetryAt !== undefined) entry.record.lastRetryAt = patch.lastRetryAt;
+    if (patch.retryReason !== undefined) entry.record.retryReason = patch.retryReason;
     entry.record.updatedAt = now;
     entry.record.progress.elapsedMs = Date.now() - entry.record.progress.startedAt;
     this.notify(runId, entry.record);
@@ -329,6 +337,24 @@ export class RunRegistry {
     if (!entry) return false;
     if (entry.record.consumedAt) return true;
     this.update(runId, { consumedAt: new Date().toISOString() });
+    return true;
+  }
+
+  /**
+   * Record a retry attempt for an async run.
+   * Returns false if the run doesn't exist or has reached max retries.
+   */
+  recordRetry(runId: string, reason: string, maxRetries: number = 2): boolean {
+    const entry = this.runs.get(runId);
+    if (!entry) return false;
+    const currentAttempt = entry.record.retryAttempt ?? 0;
+    if (currentAttempt >= maxRetries) return false;
+    this.update(runId, {
+      retryAttempt: currentAttempt + 1,
+      maxRetries,
+      lastRetryAt: new Date().toISOString(),
+      retryReason: reason,
+    });
     return true;
   }
 
