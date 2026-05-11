@@ -21,6 +21,7 @@ export type TeamEventType =
   | "task_heartbeat"
   | "task_completed"
   | "task_failed"
+  | "task_blocked"
   | "task_interrupted"
   | "command_enqueued"
   | "command_acknowledged"

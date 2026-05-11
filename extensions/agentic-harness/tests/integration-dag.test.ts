@@ -177,8 +177,7 @@ describe("integration: runTeam with blockedBy tasks", () => {
         agent: "worker",
         maxOutput: 1_000,
       },
-      fakeRuntime,
-      { now: () => new Date().toISOString() }
+      fakeRuntime
     );
 
     expect(summary).toBeDefined();
