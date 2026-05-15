@@ -69,6 +69,26 @@ Then use the slash commands:
 
 The `ask_user_question` tool is also available to the agent at all times — it will ask you questions autonomously whenever it detects ambiguity, even outside of `/clarify` mode.
 
+### Footer glyph settings
+
+The footer defaults to plain glyphs so Windows terminals without a Nerd Font do not show tofu/square boxes. To opt in to the Nerd Font/Powerline footer, either set:
+
+```bash
+PI_AGENTIC_FOOTER_GLYPHS=nerd pi
+```
+
+or add this to `.pi/settings.json`:
+
+```json
+{
+  "agenticHarness": {
+    "footerGlyphs": "nerd"
+  }
+}
+```
+
+Supported values are `plain` and `nerd`.
+
 ## Lightweight Native Team Mode
 
 > **Disabled by default.** Team mode is gated behind the `PI_ENABLE_TEAM_MODE` environment variable. Set `PI_ENABLE_TEAM_MODE=1` to enable both the LLM-callable `team` tool and the `/team` slash command. When unset, the `team` tool is not registered (hidden from the agent), and invoking `/team` returns the guidance message `team mode is disabled. Set PI_ENABLE_TEAM_MODE=1 to enable.` The `/team` command itself remains registered so it appears in completions and help output.

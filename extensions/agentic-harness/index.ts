@@ -2340,6 +2340,7 @@ Do not start multi-step implementation without a clear understanding of what the
         getModelInfo: () => getModelInfo(ctx),
       }, cacheStats, activeTools, planProgress, tui, milestoneTracker, harnessProgress, {
         preset: uiSettings.footerPreset,
+        glyphs: uiSettings.footerGlyphs,
       });
 
       const originalDispose = footer.dispose.bind(footer);

@@ -27,7 +27,7 @@ vi.mock("@mariozechner/pi-ai", () => ({
 }));
 
 vi.mock("../ui-settings.js", () => ({
-  resolveAgenticUiSettings: vi.fn(() => ({ footerPreset: "compact" })),
+  resolveAgenticUiSettings: vi.fn(() => ({ footerPreset: "compact", footerGlyphs: "plain" })),
 }));
 
 import extension from "../index.js";

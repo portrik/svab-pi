@@ -4,7 +4,7 @@ import type { ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
 import { basename } from "path";
 import { PLAN_PROGRESS_SPINNER_MS, type PlanProgressTracker } from "./plan-progress.js";
 import type { MilestoneTracker } from "./milestone-tracker.js";
-import type { FooterPresetName } from "./ui-settings.js";
+import type { FooterGlyphMode, FooterPresetName } from "./ui-settings.js";
 import type { HarnessProgressProvider } from "./harness-progress.js";
 
 // Types
@@ -57,6 +57,7 @@ type FooterPresetDefinition = {
 
 export interface FooterOptions {
   preset?: FooterPresetName;
+  glyphs?: FooterGlyphMode;
 }
 
 // Nerd Font Icons
@@ -85,8 +86,11 @@ const ICONS_PLAIN = {
   status: "●",
 } as const;
 
-let useNerdIcons = true;
-function getIcons() { return useNerdIcons ? ICONS : ICONS_PLAIN; }
+let useNerdIcons = false;
+function getIcons(glyphs?: FooterGlyphMode) {
+  const mode = glyphs ?? (useNerdIcons ? "nerd" : "plain");
+  return mode === "nerd" ? ICONS : ICONS_PLAIN;
+}
 
 // Presets
 
@@ -150,9 +154,10 @@ function getExtensionStatusText(statuses: ReadonlyMap<string, string>): string |
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
-function renderPowerlineLine(segments: FooterSegment[], width: number): string {
+function renderPowerlineLine(segments: FooterSegment[], width: number, glyphs: FooterGlyphMode): string {
   if (width <= 0 || segments.length === 0) return "";
 
+  const separator = glyphs === "nerd" ? "" : "|";
   const parts: string[] = [];
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i];
@@ -166,9 +171,9 @@ function renderPowerlineLine(segments: FooterSegment[], width: number): string {
     parts.push(`${color.fg}${color.bg}${text}`);
 
     if (i < segments.length - 1) {
-      parts.push(`\x1b[38;2;${extractRgb(color.bg)}m${nextColor.bg}`);
+      parts.push(`\x1b[38;2;${extractRgb(color.bg)}m${nextColor.bg}${separator}`);
     } else {
-      parts.push(`\x1b[38;2;${extractRgb(color.bg)}m\x1b[49m${RESET}`);
+      parts.push(`\x1b[38;2;${extractRgb(color.bg)}m\x1b[49m${separator}${RESET}`);
     }
   }
 
@@ -194,6 +199,7 @@ export class RoachFooter implements Component {
   private milestoneTracker: MilestoneTracker | null;
   private harnessProgress: HarnessProgressProvider | null;
   private preset: FooterPresetName;
+  private glyphs: FooterGlyphMode;
   private unsubscribePlanProgress: (() => void) | null = null;
   private unsubscribeMilestone: (() => void) | null = null;
   private unsubscribeHarnessProgress: (() => void) | null = null;
@@ -220,6 +226,7 @@ export class RoachFooter implements Component {
     this.milestoneTracker = milestoneTracker;
     this.harnessProgress = harnessProgress;
     this.preset = options.preset ?? "default";
+    this.glyphs = options.glyphs ?? (useNerdIcons ? "nerd" : "plain");
     this.tui = tui;
     this.unsubscribePlanProgress = this.planProgress?.subscribeOnChange(() => this.schedulePlanRender()) ?? null;
     this.unsubscribeMilestone = this.milestoneTracker?.subscribeOnChange(() => this.schedulePlanRender()) ?? null;
@@ -297,7 +304,7 @@ export class RoachFooter implements Component {
     const border = t.fg("dim", "─".repeat(Math.max(0, width)));
     const segments = this.buildSegments();
     const preset = FOOTER_PRESET_DEFINITIONS[this.preset] ?? FOOTER_PRESET_DEFINITIONS.default;
-    const renderedLines = preset.lines.map((line) => renderPowerlineLine(this.pickSegments(line, segments), width));
+    const renderedLines = preset.lines.map((line) => renderPowerlineLine(this.pickSegments(line, segments), width, this.glyphs));
     return [border, ...renderedLines];
   }
 
@@ -307,7 +314,7 @@ export class RoachFooter implements Component {
 
   private buildSegments(): Map<FooterSegmentId, FooterSegment> {
     const t = this.theme;
-    const icons = getIcons();
+    const icons = getIcons(this.glyphs);
     const dirName = basename(this.footerCtx.cwd) || this.footerCtx.cwd;
     const branch = this.footerData.getGitBranch();
     const modelInfo = this.footerCtx.getModelInfo();

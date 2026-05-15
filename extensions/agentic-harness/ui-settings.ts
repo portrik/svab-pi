@@ -5,8 +5,12 @@ import { join } from "path";
 export const FOOTER_PRESETS = ["default", "compact", "minimal"] as const;
 export type FooterPresetName = typeof FOOTER_PRESETS[number];
 
+export const FOOTER_GLYPHS = ["plain", "nerd"] as const;
+export type FooterGlyphMode = typeof FOOTER_GLYPHS[number];
+
 export interface AgenticUiSettings {
   footerPreset: FooterPresetName;
+  footerGlyphs: FooterGlyphMode;
 }
 
 export interface UiSettingsResolverOptions {
@@ -19,6 +23,7 @@ export interface UiSettingsResolverOptions {
 
 const DEFAULT_SETTINGS: AgenticUiSettings = {
   footerPreset: "default",
+  footerGlyphs: "plain",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -30,6 +35,14 @@ export function normalizeFooterPreset(value: unknown): FooterPresetName | null {
   const normalized = value.trim().toLowerCase();
   return (FOOTER_PRESETS as readonly string[]).includes(normalized)
     ? (normalized as FooterPresetName)
+    : null;
+}
+
+export function normalizeFooterGlyphs(value: unknown): FooterGlyphMode | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  return (FOOTER_GLYPHS as readonly string[]).includes(normalized)
+    ? (normalized as FooterGlyphMode)
     : null;
 }
 
@@ -53,6 +66,11 @@ function readConfiguredPreset(settings: Record<string, unknown>): FooterPresetNa
     ?? normalizeFooterPreset(powerlineUi?.preset);
 }
 
+function readConfiguredGlyphs(settings: Record<string, unknown>): FooterGlyphMode | null {
+  const agenticHarness = isRecord(settings.agenticHarness) ? settings.agenticHarness : undefined;
+  return normalizeFooterGlyphs(agenticHarness?.footerGlyphs);
+}
+
 export function resolveAgenticUiSettings(options: UiSettingsResolverOptions = {}): AgenticUiSettings {
   const cwd = options.cwd ?? process.cwd();
   const env = options.env ?? process.env;
@@ -70,5 +88,10 @@ export function resolveAgenticUiSettings(options: UiSettingsResolverOptions = {}
       ?? readConfiguredPreset(projectSettings)
       ?? readConfiguredPreset(globalSettings)
       ?? DEFAULT_SETTINGS.footerPreset,
+    footerGlyphs:
+      normalizeFooterGlyphs(env.PI_AGENTIC_FOOTER_GLYPHS)
+      ?? readConfiguredGlyphs(projectSettings)
+      ?? readConfiguredGlyphs(globalSettings)
+      ?? DEFAULT_SETTINGS.footerGlyphs,
   };
 }

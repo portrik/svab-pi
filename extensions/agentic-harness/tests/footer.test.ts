@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { visibleWidth } from "@mariozechner/pi-tui";
 import type { ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
-import { ICONS, RoachFooter, setUseNerdIcons } from "../footer.js";
+import { ICONS, ICONS_PLAIN, RoachFooter, setUseNerdIcons } from "../footer.js";
+import type { FooterGlyphMode } from "../ui-settings.js";
 
 setUseNerdIcons(false);
 
@@ -36,7 +37,8 @@ function createFooter(
   preset: "default" | "compact" | "minimal" = "default",
   gitStats = { ahead: 0, behind: 0, dirty: 0, untracked: 0 },
   thinkingLevel: "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | undefined = "high",
-  modelInfo = { name: "test-model", isLatest: false }
+  modelInfo = { name: "test-model", isLatest: false },
+  glyphs?: FooterGlyphMode
 ): RoachFooter {
   return new RoachFooter(
     stubTheme,
@@ -55,7 +57,7 @@ function createFooter(
     null,
     null,
     null,
-    { preset },
+    { preset, glyphs },
   );
 }
 
@@ -66,22 +68,29 @@ function expectAllLinesFit(lines: string[], width: number): void {
 }
 
 describe("RoachFooter Powerline styling", () => {
-  it("renders concrete Nerd Font icons and the Powerline segment separator", () => {
-    setUseNerdIcons(true);
-    try {
-      expect(Object.values(ICONS).every((icon) => icon.length > 0)).toBe(true);
+  it("defaults to plain footer glyphs without Nerd Font separators", () => {
+    const rendered = createFooter().render(100).join("\n");
 
-      const rendered = createFooter().render(100).join("\n");
+    expect(rendered).not.toContain("");
+    expect(rendered).not.toContain(ICONS.folder);
+    expect(rendered).not.toContain(ICONS.branch);
+    expect(rendered).not.toContain(ICONS.model);
+    expect(rendered).not.toContain(ICONS.thinking);
+    expect(rendered).toContain("|");
+    expect(rendered).toContain(ICONS_PLAIN.folder);
+  });
 
-      expect(rendered).toContain("");
-      expect(rendered).toContain(ICONS.folder);
-      expect(rendered).toContain(ICONS.branch);
-      expect(rendered).toContain(ICONS.model);
-      expect(rendered).toContain(ICONS.logo);
-      expect(rendered).toContain(ICONS.thinking);
-    } finally {
-      setUseNerdIcons(false);
-    }
+  it("renders concrete Nerd Font icons and the Powerline segment separator when opted in", () => {
+    expect(Object.values(ICONS).every((icon) => icon.length > 0)).toBe(true);
+
+    const rendered = createFooter(new Map(), "default", { ahead: 0, behind: 0, dirty: 0, untracked: 0 }, "high", { name: "test-model", isLatest: false }, "nerd").render(100).join("\n");
+
+    expect(rendered).toContain("");
+    expect(rendered).toContain(ICONS.folder);
+    expect(rendered).toContain(ICONS.branch);
+    expect(rendered).toContain(ICONS.model);
+    expect(rendered).toContain(ICONS.logo);
+    expect(rendered).toContain(ICONS.thinking);
   });
 
   it("renders solid background blocks with 48;2 ANSI sequences", () => {
@@ -108,7 +117,8 @@ describe("RoachFooter Powerline styling", () => {
     expect(rendered).toContain("\x1b[48;2;0;175;175m");
     expect(rendered).toContain("\x1b[48;2;215;135;175m");
     expect(rendered).toContain("\x1b[48;2;200;150;50m");
-    expect(rendered).toContain("");
+    expect(rendered).toContain("|");
+    expect(rendered).not.toContain("");
   });
 });
 

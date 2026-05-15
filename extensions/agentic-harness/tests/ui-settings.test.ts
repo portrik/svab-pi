@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { normalizeFooterPreset, resolveAgenticUiSettings } from "../ui-settings.js";
+import { normalizeFooterGlyphs, normalizeFooterPreset, resolveAgenticUiSettings } from "../ui-settings.js";
 
 function resolver(files: Record<string, string>, env: NodeJS.ProcessEnv = {}) {
   return resolveAgenticUiSettings({
     cwd: "/repo",
     homeDir: "/home/tester",
     env,
-    exists: (path) => Object.prototype.hasOwnProperty.call(files, path),
-    readFile: (path) => files[path],
+    exists: (path) => Object.prototype.hasOwnProperty.call(files, path.replace(/\\/g, "/")),
+    readFile: (path) => files[path.replace(/\\/g, "/")],
   });
 }
 
@@ -25,13 +25,30 @@ describe("normalizeFooterPreset", () => {
   });
 });
 
+describe("normalizeFooterGlyphs", () => {
+  it("accepts supported glyph modes case-insensitively", () => {
+    expect(normalizeFooterGlyphs("plain")).toBe("plain");
+    expect(normalizeFooterGlyphs(" NERD ")).toBe("nerd");
+  });
+
+  it("rejects invalid glyph modes", () => {
+    expect(normalizeFooterGlyphs("powerline")).toBeNull();
+    expect(normalizeFooterGlyphs(123)).toBeNull();
+    expect(normalizeFooterGlyphs(undefined)).toBeNull();
+  });
+});
+
 describe("resolveAgenticUiSettings", () => {
-  it("falls back to default when no settings exist", () => {
-    expect(resolver({}).footerPreset).toBe("default");
+  it("falls back to defaults when no settings exist", () => {
+    expect(resolver({})).toMatchObject({ footerPreset: "default", footerGlyphs: "plain" });
   });
 
   it("uses PI_AGENTIC_FOOTER_PRESET when valid", () => {
     expect(resolver({}, { PI_AGENTIC_FOOTER_PRESET: "compact" }).footerPreset).toBe("compact");
+  });
+
+  it("uses PI_AGENTIC_FOOTER_GLYPHS when valid", () => {
+    expect(resolver({}, { PI_AGENTIC_FOOTER_GLYPHS: "nerd" }).footerGlyphs).toBe("nerd");
   });
 
   it("ignores invalid env preset and falls back to config/default", () => {
@@ -42,21 +59,21 @@ describe("resolveAgenticUiSettings", () => {
     expect(resolver(files, { PI_AGENTIC_FOOTER_PRESET: "giant" }).footerPreset).toBe("minimal");
   });
 
-  it("reads global agenticHarness footerPreset", () => {
+  it("reads global agenticHarness footerPreset and footerGlyphs", () => {
     const files = {
-      "/home/tester/.pi/agent/settings.json": JSON.stringify({ agenticHarness: { footerPreset: "compact" } }),
+      "/home/tester/.pi/agent/settings.json": JSON.stringify({ agenticHarness: { footerPreset: "compact", footerGlyphs: "nerd" } }),
     };
 
-    expect(resolver(files).footerPreset).toBe("compact");
+    expect(resolver(files)).toMatchObject({ footerPreset: "compact", footerGlyphs: "nerd" });
   });
 
   it("lets project settings override global settings", () => {
     const files = {
-      "/home/tester/.pi/agent/settings.json": JSON.stringify({ agenticHarness: { footerPreset: "compact" } }),
-      "/repo/.pi/settings.json": JSON.stringify({ agenticHarness: { footerPreset: "minimal" } }),
+      "/home/tester/.pi/agent/settings.json": JSON.stringify({ agenticHarness: { footerPreset: "compact", footerGlyphs: "nerd" } }),
+      "/repo/.pi/settings.json": JSON.stringify({ agenticHarness: { footerPreset: "minimal", footerGlyphs: "plain" } }),
     };
 
-    expect(resolver(files).footerPreset).toBe("minimal");
+    expect(resolver(files)).toMatchObject({ footerPreset: "minimal", footerGlyphs: "plain" });
   });
 
   it("supports powerlineUi preset alias and ignores malformed JSON", () => {
@@ -66,5 +83,13 @@ describe("resolveAgenticUiSettings", () => {
     };
 
     expect(resolver(files).footerPreset).toBe("compact");
+  });
+
+  it("ignores invalid glyph env and falls back to config/default", () => {
+    const files = {
+      "/home/tester/.pi/agent/settings.json": JSON.stringify({ agenticHarness: { footerGlyphs: "nerd" } }),
+    };
+
+    expect(resolver(files, { PI_AGENTIC_FOOTER_GLYPHS: "powerline" }).footerGlyphs).toBe("nerd");
   });
 });
