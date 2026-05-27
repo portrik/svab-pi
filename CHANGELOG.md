@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.29.1](https://github.com/tmdgusya/roach-pi/compare/v1.29.0...v1.29.1) (2026-05-27)
+
+### Bug Fixes
+
+* render subagent action-mode calls correctly ([78ecd63](https://github.com/tmdgusya/roach-pi/commit/78ecd63a33687300c4e570c7acdd95c375454fc6))
+
 ## [1.29.0](https://github.com/tmdgusya/roach-pi/compare/v1.28.0...v1.29.0) (2026-05-22)
 
 ### Features
