@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.30.0](https://github.com/tmdgusya/roach-pi/compare/v1.29.1...v1.30.0) (2026-05-28)
+
+### Features
+
+* remove autonomous-dev extension ([03a8c34](https://github.com/tmdgusya/roach-pi/commit/03a8c34f8c7d38be2b184a75ca61d62f01a9257c))
+
 ## [1.29.1](https://github.com/tmdgusya/roach-pi/compare/v1.29.0...v1.29.1) (2026-05-27)
 
 ### Bug Fixes
