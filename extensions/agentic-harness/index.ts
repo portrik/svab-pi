@@ -1244,25 +1244,13 @@ Do not start multi-step implementation without a clear understanding of what the
   pi.on("before_agent_start", async (event, ctx) => {
     workingMessageBase = currentWorkingBaseMessage(activeTools);
     startWorkingMessageShimmer(ctx);
-    const isSkillInvocation = SKILL_INVOCATION_RE.test(event.prompt ?? "");
-    const phaseGuidance = (isRootSession && !isSkillInvocation) ? PHASE_GUIDANCE[currentPhase] : "";
-    const idleGuidance = (isRootSession && !isSkillInvocation && currentPhase === "idle" && !clarificationDone)
-      ? CLARIFICATION_PRIORITY_GUIDANCE
-      : "";
 
-    let delegationInfo = "";
-    if (depthConfig.canDelegate && !isTeamWorker) {
-      const agentList = (await discoverAgents(ctx.cwd || ".", "user", BUNDLED_AGENTS_DIR))
-        .map((a) => `- **${a.name}**: ${a.description}`)
-        .join("\n");
-      delegationInfo = `\n\n## Delegation Guards\n- Current depth: ${depthConfig.currentDepth}, max: ${depthConfig.maxDepth}\n- Cycle prevention: ${depthConfig.preventCycles ? "enabled" : "disabled"}\n- Ancestor stack: ${depthConfig.ancestorStack.length > 0 ? depthConfig.ancestorStack.join(" -> ") : "(root)"}\n\n## Available Subagents\n${agentList}`;
-    }
-
-    const combined = phaseGuidance + idleGuidance;
-    // Always inject progress tracking rules (they are unconditional).
-    // Phase guidance and delegation info are conditional.
+    // Keep the appended system prompt suffix deterministic across turns so
+    // workflow phase changes, runtime state, and agent discovery cannot perturb
+    // provider prompt-cache keys. Phase-specific instructions are delivered by
+    // the command follow-up prompts that start those workflows instead.
     return {
-      systemPrompt: event.systemPrompt + PROGRESS_TRACKING_RULES + combined + delegationInfo,
+      systemPrompt: event.systemPrompt + PROGRESS_TRACKING_RULES,
     };
   });
 

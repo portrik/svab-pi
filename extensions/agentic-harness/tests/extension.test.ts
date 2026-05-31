@@ -627,7 +627,7 @@ describe("ask_user_question Tool", () => {
 });
 
 describe("before_agent_start Event", () => {
-  it("should inject delegation guards even when phase is idle", async () => {
+  it("should keep idle before_agent_start suffix free of dynamic delegation content", async () => {
     const { mockPi, events } = createMockPi();
     extension(mockPi);
 
@@ -637,10 +637,9 @@ describe("before_agent_start Event", () => {
       { cwd: "." } as any
     );
 
-    // idle phase has no guidance text, but delegation guards are still injected
     expect(result?.systemPrompt).toContain("base");
-    expect(result?.systemPrompt).toContain("## Delegation Guards");
-    expect(result?.systemPrompt).toContain("## Available Subagents");
+    expect(result?.systemPrompt).not.toContain("## Delegation Guards");
+    expect(result?.systemPrompt).not.toContain("## Available Subagents");
   });
 
   it("should not include legacy planning workflow guidance in the root system prompt", async () => {
@@ -682,9 +681,15 @@ describe("before_agent_start Event", () => {
     }
   });
 
-  it("should inject review workflow guidance after /review", async () => {
+  it("should keep before_agent_start system prompt suffix invariant after /review", async () => {
     const { mockPi, events, commands } = createMockPi();
     extension(mockPi);
+
+    const handlers = events.get("before_agent_start")!;
+    const before = await handlers[0](
+      { type: "before_agent_start", prompt: "test", systemPrompt: "base" },
+      { cwd: "." } as any
+    );
 
     const review = commands.get("review");
     await review.handler("123", {
@@ -694,17 +699,19 @@ describe("before_agent_start Event", () => {
       },
     } as any);
 
-    const handlers = events.get("before_agent_start")!;
-    const result = await handlers[0](
+    const after = await handlers[0](
       { type: "before_agent_start", prompt: "test", systemPrompt: "base" },
       { cwd: "." } as any
     );
 
-    expect(result?.systemPrompt).toContain("Active Workflow: Code Review (/review)");
-    expect(result?.systemPrompt).toContain("Do NOT dispatch subagents");
+    expect(after?.systemPrompt).toBe(before?.systemPrompt);
+    expect(after?.systemPrompt).not.toContain("Active Workflow: Code Review (/review)");
+    expect(after?.systemPrompt).not.toContain("Do NOT dispatch subagents");
+    expect(after?.systemPrompt).not.toContain("## Available Subagents");
+    expect(after?.systemPrompt).not.toContain("## Delegation Guards");
   });
 
-  it("should NOT inject phase guidance in subagent context, but should still inject delegation guards", async () => {
+  it("should NOT inject phase guidance or dynamic delegation guards in subagent context", async () => {
     const prevDepth = process.env.PI_SUBAGENT_DEPTH;
     process.env.PI_SUBAGENT_DEPTH = "1";
     try {
@@ -723,16 +730,15 @@ describe("before_agent_start Event", () => {
 
       expect(result?.systemPrompt).toContain("base");
       expect(result?.systemPrompt).not.toContain("Active Workflow:");
-      // Delegation guards depend on depthConfig.canDelegate. At depth=1 (< default max 3) delegation is still allowed,
-      // so the guards section still appears.
-      expect(result?.systemPrompt).toContain("## Delegation Guards");
+      expect(result?.systemPrompt).not.toContain("## Delegation Guards");
+      expect(result?.systemPrompt).not.toContain("## Available Subagents");
     } finally {
       if (prevDepth === undefined) delete process.env.PI_SUBAGENT_DEPTH;
       else process.env.PI_SUBAGENT_DEPTH = prevDepth;
     }
   });
 
-  it("should suppress phase guidance when user prompt is a skill/command invocation", async () => {
+  it("should keep before_agent_start suffix unchanged for normal and skill invocation prompts", async () => {
     const { mockPi, events, commands } = createMockPi();
     extension(mockPi);
 
@@ -746,12 +752,12 @@ describe("before_agent_start Event", () => {
 
     const handlers = events.get("before_agent_start")!;
 
-    // Case A: a normal user turn — phase guidance is injected as before.
+    // Case A: a normal user turn — phase guidance is not injected into the system prompt.
     const normal = await handlers[0](
       { type: "before_agent_start", prompt: "keep working on the review", systemPrompt: "base" },
       { cwd: "." } as any
     );
-    expect(normal?.systemPrompt).toContain("Active Workflow: Code Review");
+    expect(normal?.systemPrompt).not.toContain("Active Workflow: Code Review");
 
     // Case B: the user invokes a skill via the claude-code-style <command-name> tag.
     // Phase guidance must NOT be injected for this turn.
@@ -764,6 +770,7 @@ describe("before_agent_start Event", () => {
       { type: "before_agent_start", prompt: skillPrompt, systemPrompt: "base" },
       { cwd: "." } as any
     );
+    expect(skillTurn?.systemPrompt).toBe(normal?.systemPrompt);
     expect(skillTurn?.systemPrompt).not.toContain("Active Workflow: Code Review");
 
     // Case C: a raw "[skill] foo" marker also suppresses guidance.
@@ -771,6 +778,7 @@ describe("before_agent_start Event", () => {
       { type: "before_agent_start", prompt: "[skill] some-skill\n\nfix this", systemPrompt: "base" },
       { cwd: "." } as any
     );
+    expect(bracketTurn?.systemPrompt).toBe(normal?.systemPrompt);
     expect(bracketTurn?.systemPrompt).not.toContain("Active Workflow: Code Review");
   });
   it("should ignore legacy compacted milestone phase details", async () => {
@@ -1064,7 +1072,7 @@ describe("tool_result Phase Auto-Reset", () => {
       { type: "before_agent_start", prompt: "continue reviewing", systemPrompt: "base" },
       { cwd: "." } as any
     );
-    expect(before?.systemPrompt).toContain("Active Workflow: Code Review");
+    expect(before?.systemPrompt).not.toContain("Active Workflow: Code Review");
 
     const toolHandlers = events.get("tool_result")!;
     await toolHandlers[0](
@@ -1110,7 +1118,7 @@ describe("tool_result Phase Auto-Reset", () => {
       { type: "before_agent_start", prompt: "anything", systemPrompt: "base" },
       { cwd: "." } as any
     );
-    expect(after?.systemPrompt).toContain("Active Workflow: Code Review");
+    expect(after?.systemPrompt).not.toContain("Active Workflow: Code Review");
   });
 
   it("should NOT reset phase on edit — only on write (first creation)", async () => {
@@ -1140,7 +1148,7 @@ describe("tool_result Phase Auto-Reset", () => {
       { type: "before_agent_start", prompt: "anything", systemPrompt: "base" },
       { cwd: "." } as any
     );
-    expect(after?.systemPrompt).toContain("Active Workflow: Code Review");
+    expect(after?.systemPrompt).not.toContain("Active Workflow: Code Review");
   });
 
   it("should also clear activeGoalDocument on auto-reset (symmetric with /reset-phase)", async () => {
