@@ -43,7 +43,7 @@ import { join } from "node:path";
 import extension from "../index.js";
 import { applyGoalCommand, createGoalState, type GoalItem, type GoalVerifierReceipt } from "../goal-state.js";
 import { defaultGoalStateRoot } from "../goal-storage.js";
-import { loadGoalState } from "../goal-state-service.js";
+import { applyAndPersistGoalCommand, loadGoalState } from "../goal-state-service.js";
 import { buildGoalVerifierReceipt, getGoalVerifierTarget, parseGoalVerifierOutput } from "../goal-verifier.js";
 import { planGoalContinuation } from "../goal-continuation.js";
 import { runAgent } from "../subagent.js";
@@ -67,7 +67,7 @@ describe("goal continuation", () => {
       const goal = commands.get("goal");
       const ctx = mockGoalCtx(cwd, "run-continuation-fail");
 
-      await goal.handler("create Ship continuation", ctx);
+      await createReadyGoalState(cwd, "run-continuation-fail", ctx);
       await goal.handler("complete goal-1", ctx);
 
       const state = await loadGoalState("run-continuation-fail", defaultGoalStateRoot(cwd));
@@ -88,10 +88,15 @@ describe("goal continuation", () => {
       const goal = commands.get("goal");
       const ctx = mockGoalCtx(cwd, "run-continuation-pass");
 
-      await goal.handler("create Ship continuation", ctx);
-      await goal.handler("activate goal-1", ctx);
-      await goal.handler("subgoal goal-1 First target", ctx);
-      await goal.handler("subgoal goal-1 Second target", ctx);
+      await createReadyGoalState(cwd, "run-continuation-pass", ctx);
+      await applyAndPersistGoalCommand("run-continuation-pass", defaultGoalStateRoot(cwd), {
+        type: "create_subgoal",
+        subgoal: { id: "subgoal-1", goalId: "goal-1", title: "First target", objective: "First target" },
+      }, ctx);
+      await applyAndPersistGoalCommand("run-continuation-pass", defaultGoalStateRoot(cwd), {
+        type: "create_subgoal",
+        subgoal: { id: "subgoal-2", goalId: "goal-1", title: "Second target", objective: "Second target" },
+      }, ctx);
       await goal.handler("complete subgoal-1", ctx);
 
       const state = await loadGoalState("run-continuation-pass", defaultGoalStateRoot(cwd));
@@ -190,6 +195,21 @@ function mockGoalCtx(cwd: string, runId: string) {
       appendCustomEntry: vi.fn(),
     },
   };
+}
+
+async function createReadyGoalState(cwd: string, runId: string, ctx: any) {
+  const rootDir = defaultGoalStateRoot(cwd);
+  await applyAndPersistGoalCommand(runId, rootDir, {
+    type: "create_goal",
+    goal: {
+      id: "goal-1",
+      title: "Ship continuation",
+      objective: "Ship continuation",
+      successCriteria: ["Continuation works"],
+      evidenceRequired: ["Verifier evidence exists"],
+    },
+  }, ctx);
+  await applyAndPersistGoalCommand(runId, rootDir, { type: "activate_goal", goalId: "goal-1" }, ctx);
 }
 
 function verifierResult(text: string): any {

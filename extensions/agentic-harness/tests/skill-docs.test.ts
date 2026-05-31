@@ -29,6 +29,10 @@ describe("goal skill docs", () => {
     const src = readSkill("agentic-goal");
 
     expect(src).toContain("/goal status");
+    expect(src).toContain("/goal <request>");
+    expect(src).toContain("New Request Triage");
+    expect(src).toContain("answer directly as a normal prompt");
+    expect(src).toContain("Goal Contract before activation");
     expect(src).toContain("todoread");
     expect(src).toContain("todowrite");
     expect(src).toContain("/goal evidence");
@@ -52,6 +56,12 @@ describe("clarification skill goal handoff", () => {
     expect(src.toLowerCase()).toContain("non-goals");
     expect(src).toContain("Edge cases");
     expect(src).toContain("Technical context");
+    expect(src).toContain("Use explorer only when needed");
+    expect(src).toContain("non-code/product/wording clarification");
+    expect(src).toContain("technical context is missing/uncertain");
+    expect(src).not.toContain("Always use subagents");
+    expect(src).not.toContain("Immediately after asking the user a question");
+    expect(src).not.toContain("Run in parallel with user Q&A");
     expect(src.toLowerCase()).toContain("success criteria");
     expect(src.toLowerCase()).toContain("evidence required");
     expect(src).not.toContain(legacySkillNames[0]);

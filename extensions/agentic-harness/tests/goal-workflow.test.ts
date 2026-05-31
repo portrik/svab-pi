@@ -98,6 +98,9 @@ describe("clarify to goal workflow", () => {
       expect(prompt).toContain("Goal Contract");
       expect(prompt).toContain("/goal handoff");
       expect(prompt).toContain("clarification_state");
+      expect(prompt).toContain("only when the request is clearly implementation/codebase-impacting or technical context is missing/uncertain");
+      expect(prompt).toContain("skip explorer for non-code/product/wording clarification");
+      expect(prompt).not.toContain("investigate relevant parts of the codebase in parallel");
       expect(prompt).toContain("Gate: PASS");
       expect(prompt).not.toContain(["agentic", "pl", "an", "crafting"].join("-"));
       expect(prompt).not.toContain(["agentic", "milestone", "planning"].join("-"));
@@ -199,6 +202,88 @@ describe("clarify to goal workflow", () => {
     }
   });
 
+  it("triages free-text /goal requests without creating a goal immediately", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "goal-free-text-"));
+    try {
+      const { mockPi, commands } = createMockPi();
+      extension(mockPi);
+      const goal = commands.get("goal");
+      const ctx = mockGoalCtx(cwd, "run-free-text");
+
+      await goal.handler("investigate current parser behavior", ctx);
+
+      const state = await loadGoalState("run-free-text", defaultGoalStateRoot(cwd));
+      expect(state.goals).toHaveLength(0);
+      expect(ctx.ui.setStatus).toHaveBeenCalledWith("harness", "Goal request triage in progress...");
+      expect(mockPi.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("First triage the request silently"), { deliverAs: "followUp" });
+      const prompt = mockPi.sendUserMessage.mock.calls[0][0];
+      expect(prompt).toContain("answer it directly as a normal user prompt");
+      expect(prompt).toContain("route it into deep agentic-clarification");
+      expect(prompt).toContain("If uncertain, prefer clarification");
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves explicit subcommands instead of triaging them as free text", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "goal-status-explicit-"));
+    try {
+      const { mockPi, commands } = createMockPi();
+      extension(mockPi);
+      const goal = commands.get("goal");
+      const ctx = mockGoalCtx(cwd, "run-explicit-status");
+
+      await goal.handler("status", ctx);
+
+      expect(ctx.ui.notify).toHaveBeenCalledWith(expect.stringContaining("Active goal: none"), "info");
+      expect(mockPi.sendUserMessage).not.toHaveBeenCalled();
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("routes incomplete objective-only goals to clarification before activation or completion", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "goal-incomplete-"));
+    try {
+      const { mockPi, commands } = createMockPi();
+      extension(mockPi);
+      const goal = commands.get("goal");
+      const ctx = mockGoalCtx(cwd, "run-incomplete");
+
+      await goal.handler("create Ship verifier guard", ctx);
+      await goal.handler("activate goal-1", ctx);
+      await goal.handler("complete goal-1", ctx);
+
+      const state = await loadGoalState("run-incomplete", defaultGoalStateRoot(cwd));
+      expect(runAgent).not.toHaveBeenCalled();
+      expect(state.goals[0].status).toBe("queued");
+      expect(mockPi.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("not structurally ready"), { deliverAs: "followUp" });
+      expect(mockPi.sendUserMessage.mock.calls.at(-1)?.[0]).toContain("missing success criteria, missing evidence required");
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("routes incomplete queued goals to clarification instead of auto-starting with empty /goal", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "goal-incomplete-auto-"));
+    try {
+      const { mockPi, commands } = createMockPi();
+      extension(mockPi);
+      const goal = commands.get("goal");
+      const ctx = mockGoalCtx(cwd, "run-incomplete-auto");
+
+      await goal.handler("create Ship verifier guard", ctx);
+      await goal.handler("", ctx);
+
+      const state = await loadGoalState("run-incomplete-auto", defaultGoalStateRoot(cwd));
+      expect(state.goals[0].status).toBe("queued");
+      expect(mockPi.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("not structurally ready"), { deliverAs: "followUp" });
+      expect(mockPi.sendUserMessage.mock.calls.at(-1)?.[0]).toContain("missing success criteria, missing evidence required");
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
   it("completes a goal only when reviewer-verifier returns PASS", async () => {
     vi.mocked(runAgent).mockResolvedValue(verifierResult("Verdict: PASS\nSummary: Complete\nBlockers:\nCommands Run:\n- npm test\nEvidence Checked:\n- tests passed"));
     const cwd = await mkdtemp(join(tmpdir(), "goal-pass-"));
@@ -208,7 +293,7 @@ describe("clarify to goal workflow", () => {
       const goal = commands.get("goal");
       const ctx = mockGoalCtx(cwd, "run-pass");
 
-      await goal.handler("create Ship verifier guard", ctx);
+      await createReadyGoal(cwd, "run-pass", ctx, goal);
       await goal.handler("complete goal-1", ctx);
 
       const state = await loadGoalState("run-pass", defaultGoalStateRoot(cwd));
@@ -232,7 +317,7 @@ describe("clarify to goal workflow", () => {
       const goal = commands.get("goal");
       const ctx = mockGoalCtx(cwd, "run-fail");
 
-      await goal.handler("create Ship verifier guard", ctx);
+      await createReadyGoal(cwd, "run-fail", ctx, goal);
       await goal.handler("complete goal-1", ctx);
 
       const state = await loadGoalState("run-fail", defaultGoalStateRoot(cwd));
@@ -254,7 +339,7 @@ describe("clarify to goal workflow", () => {
       const goal = commands.get("goal");
       const ctx = mockGoalCtx(cwd, "run-retry-pass");
 
-      await goal.handler("create Ship verifier guard", ctx);
+      await createReadyGoal(cwd, "run-retry-pass", ctx, goal);
       await goal.handler("complete goal-1", ctx);
       let state = await loadGoalState("run-retry-pass", defaultGoalStateRoot(cwd));
       expect(state.continuation.queued).toBe(true);
@@ -279,7 +364,7 @@ describe("clarify to goal workflow", () => {
       const goal = commands.get("goal");
       const ctx = mockGoalCtx(cwd, "run-malformed");
 
-      await goal.handler("create Ship verifier guard", ctx);
+      await createReadyGoal(cwd, "run-malformed", ctx, goal);
       await goal.handler("complete goal-1", ctx);
 
       const state = await loadGoalState("run-malformed", defaultGoalStateRoot(cwd));
@@ -299,7 +384,7 @@ describe("clarify to goal workflow", () => {
       const goal = commands.get("goal");
       const ctx = mockGoalCtx(cwd, "run-error");
 
-      await goal.handler("create Ship verifier guard", ctx);
+      await createReadyGoal(cwd, "run-error", ctx, goal);
       await goal.handler("complete goal-1", ctx);
 
       const state = await loadGoalState("run-error", defaultGoalStateRoot(cwd));
@@ -310,6 +395,11 @@ describe("clarify to goal workflow", () => {
     }
   });
 });
+
+async function createReadyGoal(cwd: string, runId: string, ctx: any, goalCommand: any) {
+  await draftClarificationContract(cwd, runId, ctx, []);
+  await goalCommand.handler("", ctx);
+}
 
 async function draftClarificationContract(cwd: string, runId: string, ctx: any, suggestedSubgoals = ["Implement auto start", "Verify idempotency"]) {
   const rootDir = defaultClarificationStateRoot(cwd);

@@ -1175,8 +1175,8 @@ Do not start multi-step implementation without a clear understanding of what the
       "You are in agentic-clarification mode. Follow the agentic-clarification skill rules strictly:",
       clarificationQuestionRule,
       "- Generate questions and choices dynamically based on context — no predefined templates.",
-      "- Use the subagent tool with agent 'explorer' to investigate the codebase in parallel with user Q&A.",
-      "- Use clarification_state after every user answer and explorer finding to update the hidden interview runtime.",
+      "- Use the subagent tool with agent 'explorer' only when the request is clearly implementation/codebase-impacting or technical context is missing/uncertain; skip explorer for non-code/product/wording clarification to save tokens and latency.",
+      "- Use clarification_state after every user answer and after every explorer finding when an explorer is dispatched to update the hidden interview runtime.",
       "- Required checklist: objective, scope, non-goals, constraints, success criteria, evidence required, risks, edge cases, and technical context.",
       "- Track dynamic unresolved ambiguities as blocking unless the user explicitly accepts them as risk.",
       "- Before producing a Goal Contract, call clarification_state with action=status and verify Gate: PASS.",
@@ -1561,7 +1561,7 @@ Do not start multi-step implementation without a clear understanding of what the
       const topic = args?.trim() || "";
       const start = await ctx.ui.confirm(
         "Start Deep Clarification",
-        "The agent will ask one focused question at a time, explore the codebase in parallel, and use a hidden runtime checklist so a Goal Contract is not drafted until ambiguity is resolved or accepted as risk.\n\nProceed?"
+        "The agent will ask one focused question at a time, use codebase exploration only when technical context is needed, and use a hidden runtime checklist so a Goal Contract is not drafted until ambiguity is resolved or accepted as risk.\n\nProceed?"
       );
       if (!start) return;
 
@@ -1578,11 +1578,11 @@ Do not start multi-step implementation without a clear understanding of what the
 
       const prompt = topic
         ? isRootSession
-          ? `The user wants to clarify the following request: "${topic}"\n\nBegin the runtime-enforced deep agentic-clarification process. Follow the agentic-clarification skill rules. Ask ONE question using the ask_user_question tool. Use the subagent tool with agent 'explorer' to investigate relevant parts of the codebase in parallel. Use the clarification_state tool after every user answer and explorer finding. Before producing a Goal Contract, call clarification_state with action=status and only draft the Goal Contract after the hidden checklist and ambiguity gate reports Gate: PASS. When the gate passes, call clarification_state with action=draft_goal_contract, then produce a Goal Contract with an exact /goal handoff and stop.`
-          : `The user wants to clarify the following request: "${topic}"\n\nBegin the runtime-enforced deep agentic-clarification process. Follow the agentic-clarification skill rules. Do not ask the user questions directly. If information is missing, state the missing information clearly in your output. Use the subagent tool with agent 'explorer' to investigate relevant parts of the codebase in parallel. If clarification_state is available, record concrete findings and do not draft a Goal Contract until the checklist and ambiguity gate passes.`
+          ? `The user wants to clarify the following request: "${topic}"\n\nBegin the runtime-enforced deep agentic-clarification process. Follow the agentic-clarification skill rules. Ask ONE question using the ask_user_question tool. Use the subagent tool with agent 'explorer' only when the request is clearly implementation/codebase-impacting or technical context is missing/uncertain; skip explorer for non-code/product/wording clarification to save tokens and latency. Use the clarification_state tool after every user answer and after explorer findings when an explorer is dispatched. Before producing a Goal Contract, call clarification_state with action=status and only draft the Goal Contract after the hidden checklist and ambiguity gate reports Gate: PASS. When the gate passes, call clarification_state with action=draft_goal_contract, then produce a Goal Contract with an exact /goal handoff and stop.`
+          : `The user wants to clarify the following request: "${topic}"\n\nBegin the runtime-enforced deep agentic-clarification process. Follow the agentic-clarification skill rules. Do not ask the user questions directly. If information is missing, state the missing information clearly in your output. Use the subagent tool with agent 'explorer' only when the request is clearly implementation/codebase-impacting or technical context is missing/uncertain; skip explorer for non-code/product/wording clarification to save tokens and latency. If clarification_state is available, record concrete findings and do not draft a Goal Contract until the checklist and ambiguity gate passes.`
         : isRootSession
-          ? `The user wants to start a runtime-enforced deep agentic-clarification session for their current task.\n\nFollow the agentic-clarification skill rules. Ask ONE question using the ask_user_question tool to understand what the user wants to accomplish. Use the subagent tool with agent 'explorer' to investigate the codebase in parallel. Use clarification_state after every answer and explorer finding. Before producing a Goal Contract, call clarification_state with action=status and only draft after Gate: PASS. When the gate passes, call clarification_state with action=draft_goal_contract, then produce a Goal Contract with an exact /goal handoff and stop.`
-          : `The user wants to start a runtime-enforced deep agentic-clarification session for their current task.\n\nFollow the agentic-clarification skill rules. Do not ask the user questions directly. If information is missing, state the missing information clearly in your output. Use the subagent tool with agent 'explorer' to investigate the codebase in parallel. If clarification_state is available, record concrete findings and do not draft a Goal Contract until the checklist and ambiguity gate passes.`;
+          ? `The user wants to start a runtime-enforced deep agentic-clarification session for their current task.\n\nFollow the agentic-clarification skill rules. Ask ONE question using the ask_user_question tool to understand what the user wants to accomplish. Use the subagent tool with agent 'explorer' only when the request is clearly implementation/codebase-impacting or technical context is missing/uncertain; skip explorer for non-code/product/wording clarification to save tokens and latency. Use clarification_state after every answer and after explorer findings when an explorer is dispatched. Before producing a Goal Contract, call clarification_state with action=status and only draft after Gate: PASS. When the gate passes, call clarification_state with action=draft_goal_contract, then produce a Goal Contract with an exact /goal handoff and stop.`
+          : `The user wants to start a runtime-enforced deep agentic-clarification session for their current task.\n\nFollow the agentic-clarification skill rules. Do not ask the user questions directly. If information is missing, state the missing information clearly in your output. Use the subagent tool with agent 'explorer' only when the request is clearly implementation/codebase-impacting or technical context is missing/uncertain; skip explorer for non-code/product/wording clarification to save tokens and latency. If clarification_state is available, record concrete findings and do not draft a Goal Contract until the checklist and ambiguity gate passes.`;
 
       pi.sendUserMessage(prompt);
     },
@@ -1600,6 +1600,19 @@ Do not start multi-step implementation without a clear understanding of what the
     if (state.goals.some((goal) => goal.id === targetId)) return "goal";
     if (state.goals.some((goal) => goal.subgoals.some((subgoal) => subgoal.id === targetId))) return "subgoal";
     throw new Error(`Unknown goal target: ${targetId}`);
+  };
+  const goalForTargetId = (state: GoalState, targetId: string) => {
+    const direct = state.goals.find((goal) => goal.id === targetId);
+    if (direct) return direct;
+    return state.goals.find((goal) => goal.subgoals.some((subgoal) => subgoal.id === targetId));
+  };
+  const goalReadinessBlockers = (goal: ReturnType<typeof goalForTargetId>): string[] => {
+    if (!goal) return ["unknown goal target"];
+    const blockers: string[] = [];
+    if (!goal.objective.trim()) blockers.push("missing objective");
+    if (goal.successCriteria.length === 0) blockers.push("missing success criteria");
+    if (goal.evidenceRequired.length === 0) blockers.push("missing evidence required");
+    return blockers;
   };
   const refreshGoalFooterSummary = (state: GoalState) => {
     currentGoalFooterSummary = renderGoalSummary(state);
@@ -1659,6 +1672,26 @@ Do not start multi-step implementation without a clear understanding of what the
     ].join("\n").toLowerCase();
     return /\b(delete|destructive|drop|wipe|remove data|production|migration|large[- ]scale|irreversible)\b/.test(haystack);
   };
+  const buildGoalContractRequiredPrompt = (goalId: string, blockers: string[]): string => [
+    "The user attempted to activate or complete a durable goal that is not structurally ready for verifier-backed execution.",
+    "",
+    `Goal: ${goalId}`,
+    `Missing: ${blockers.join(", ")}`,
+    "",
+    "Do not activate or complete this goal from objective-only state. Route the user into deep agentic-clarification so a Goal Contract can define objective, scope, success criteria, and evidence required before durable goal execution continues.",
+  ].join("\n");
+  const buildGoalTriagePrompt = (request: string): string => [
+    "The user ran `/goal <request>` as the simplified goal entrypoint.",
+    "",
+    `Request: ${request}`,
+    "",
+    "First triage the request silently:",
+    "- If this is a simple investigation, question, explanation, or read-only lookup that does not need durable verifier-backed execution, answer it directly as a normal user prompt.",
+    "- If this is complex implementation work, ambiguous work, multi-step work, or work whose completion should be verified, route it into deep agentic-clarification before activating a durable goal.",
+    "- If uncertain, prefer clarification for complex or ambiguous work.",
+    "",
+    "For clarification routing: follow the agentic-clarification skill rules, ask one focused question when needed, use exploration only when technical context is missing, call clarification_state, wait for Gate: PASS, draft a Goal Contract, and stop with the /goal handoff. Do not activate a durable goal from underspecified free text.",
+  ].join("\n");
   const buildGoalAutoPrompt = (state: GoalState): string => {
     const goal = activeOrRunnableGoal(state);
     const activeSubgoal = goal?.subgoals.find((subgoal) => subgoal.id === goal.activeSubgoalId || subgoal.status === "active" || subgoal.status === "blocked");
@@ -1747,6 +1780,12 @@ Do not start multi-step implementation without a clear understanding of what the
     }
 
     if (goal.status === "queued") {
+      const blockers = goalReadinessBlockers(goal);
+      if (blockers.length > 0) {
+        currentPhase = "clarifying";
+        await sendGoalContinuationFollowUp(buildGoalContractRequiredPrompt(goal.id, blockers));
+        return state;
+      }
       state = await applyGoalMutation(ctx, { type: "activate_goal", goalId: goal.id });
     }
     currentPhase = "goal_active";
@@ -1843,7 +1882,7 @@ Do not start multi-step implementation without a clear understanding of what the
   };
 
   pi.registerCommand("goal", {
-    description: "Auto-start or continue the durable goal runtime — use /clarify, then /goal",
+    description: "Triage /goal <request>, or auto-start/continue the durable goal runtime",
     handler: async (args, ctx) => {
       const runId = goalRunId(ctx);
       const rootDir = goalRootDir(ctx);
@@ -1866,6 +1905,13 @@ Do not start multi-step implementation without a clear understanding of what the
         if (parsed.kind === "auto") {
           const state = await autoStartGoalRuntime(ctx, await loadGoalState(runId, rootDir));
           notifyGoal(ctx, renderGoalStatus(state), "success");
+          return;
+        }
+        if (parsed.kind === "triage") {
+          currentPhase = "goal_drafting";
+          activeArtifactDocument = null;
+          ctx.ui?.setStatus?.("harness", "Goal request triage in progress...");
+          await sendGoalContinuationFollowUp(buildGoalTriagePrompt(parsed.request));
           return;
         }
         if (parsed.kind === "clear") {
@@ -1891,9 +1937,17 @@ Do not start multi-step implementation without a clear understanding of what the
               },
             });
             break;
-          case "activate":
+          case "activate": {
+            const blockers = goalReadinessBlockers(goalForTargetId(current, parsed.goalId));
+            if (blockers.length > 0) {
+              currentPhase = "clarifying";
+              await sendGoalContinuationFollowUp(buildGoalContractRequiredPrompt(parsed.goalId, blockers));
+              state = current;
+              break;
+            }
             state = await applyGoalMutation(ctx, { type: "activate_goal", goalId: parsed.goalId });
             break;
+          }
           case "subgoal":
             state = await applyGoalMutation(ctx, {
               type: "create_subgoal",
@@ -1918,6 +1972,13 @@ Do not start multi-step implementation without a clear understanding of what the
               current = await applyGoalMutation(ctx, { type: "clear_continuation" });
             }
             const targetType = targetTypeForId(current, parsed.targetId);
+            const blockers = goalReadinessBlockers(goalForTargetId(current, parsed.targetId));
+            if (blockers.length > 0) {
+              currentPhase = "clarifying";
+              await sendGoalContinuationFollowUp(buildGoalContractRequiredPrompt(parsed.targetId, blockers));
+              state = current;
+              break;
+            }
             const requested = await applyGoalMutation(ctx, {
               type: "request_completion",
               targetType,

@@ -1,7 +1,8 @@
-export const GOAL_HELP_TEXT = `Goal runtime\n\nFlow: use /clarify to shape a Goal Contract, then run /goal. The runtime creates, activates, continues, and verifies automatically until PASS.\n\nCommands:\n  /goal                         Auto-start or continue the active goal until verifier PASS\n  /goal status                  Show status only\n  /goal create <objective>      Advanced: queue a goal objective\n  /goal activate <goalId>       Advanced: activate a queued goal\n  /goal subgoal <goalId> <title> Add a subgoal\n  /goal evidence <targetId> <evidence> Record evidence\n  /goal complete <targetId>     Request verifier-guarded completion\n  /goal pause [goalId]          Pause active or selected goal\n  /goal resume [goalId]         Resume active or selected goal\n  /goal clear --confirm         Clear goal runtime state\n  /goal help                    Show this help\n\nCompletion guard: completion is accepted only after reviewer-verifier returns PASS for the current objective and evidence. If verification fails, blockers stay on the goal and work continues.`;
+export const GOAL_HELP_TEXT = `Goal runtime\n\nFlow: run /goal <request>. Simple investigation requests are answered directly; complex or ambiguous work is routed through clarification into a Goal Contract before verifier-backed execution.\n\nCommands:\n  /goal <request>               Triage a new request: answer simple investigations, clarify complex goals\n  /goal                         Auto-start or continue the active goal until verifier PASS\n  /goal status                  Show status only\n  /goal create <objective>      Advanced: queue a goal objective\n  /goal activate <goalId>       Advanced: activate a queued goal\n  /goal subgoal <goalId> <title> Add a subgoal\n  /goal evidence <targetId> <evidence> Record evidence\n  /goal complete <targetId>     Request verifier-guarded completion\n  /goal pause [goalId]          Pause active or selected goal\n  /goal resume [goalId]         Resume active or selected goal\n  /goal clear --confirm         Clear goal runtime state\n  /goal help                    Show this help\n\nCompletion guard: completion is accepted only after reviewer-verifier returns PASS for the current objective and evidence. If verification fails, blockers stay on the goal and work continues.`;
 
 export type ParsedGoalCommand =
   | { kind: "auto" }
+  | { kind: "triage"; request: string }
   | { kind: "status" }
   | { kind: "create"; objective: string }
   | { kind: "activate"; goalId: string }
@@ -52,8 +53,10 @@ export function parseGoalCommand(input: string): ParsedGoalCommand {
         : error("Usage: /goal clear --confirm");
     case "help":
       return rest.length === 0 ? { kind: "help" } : error("Usage: /goal help");
-    default:
-      return error(`Unknown /goal command: ${command}`);
+    default: {
+      const request = [command, ...rest].join(" ").trim();
+      return request ? { kind: "triage", request } : error("Usage: /goal <request>");
+    }
   }
 }
 

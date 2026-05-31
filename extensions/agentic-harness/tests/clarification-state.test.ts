@@ -75,6 +75,22 @@ describe("clarification state", () => {
     expect(drafted.goalContract?.handoffCommand).toBe("/goal");
   });
 
+  it("keeps technical_context required even when explorer dispatch is conditional", () => {
+    let state = createClarificationState("run-1", "2026-05-29T00:00:00.000Z", "ship feature");
+
+    for (const id of REQUIRED_CLARIFICATION_CHECKLIST) {
+      if (id === "technical_context") continue;
+      state = applyClarificationCommand(state, {
+        type: "mark_checklist_item",
+        id,
+        value: `${id} clarified`,
+      }, { now: "2026-05-29T00:00:01.000Z" }).state;
+    }
+
+    expect(canDraftGoalContract(state)).toBe(false);
+    expect(getClarificationGateIssues(state)).toContain("Required checklist item is incomplete: Affected files / technical context");
+  });
+
   it("rejects empty checklist completion values", () => {
     const state = createClarificationState("run-1", "2026-05-29T00:00:00.000Z", "ship feature");
 

@@ -845,6 +845,9 @@ describe("/clarify Command", () => {
     expect(prompt).toContain("runtime-enforced deep agentic-clarification");
     expect(prompt).toContain("ask_user_question");
     expect(prompt).toContain("subagent");
+    expect(prompt).toContain("only when the request is clearly implementation/codebase-impacting or technical context is missing/uncertain");
+    expect(prompt).toContain("skip explorer for non-code/product/wording clarification");
+    expect(prompt).not.toContain("investigate relevant parts of the codebase in parallel");
     expect(prompt).toContain("clarification_state");
     expect(prompt).toContain("Gate: PASS");
   });

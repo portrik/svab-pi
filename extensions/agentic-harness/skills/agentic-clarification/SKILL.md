@@ -1,20 +1,20 @@
 ---
 name: agentic-clarification
-description: Use when a user's request is vague, ambiguous, or underspecified. Launches an iterative Q&A loop to resolve ambiguity while a subagent explores the codebase in parallel. Outputs a Goal Contract for the durable /goal runtime. Triggers on "I want to...", "I need...", "let's build...", "can you help me...", "we should...", or any request where the full scope isn't immediately clear.
+description: Use when a user's request is vague, ambiguous, or underspecified. Launches an iterative Q&A loop to resolve ambiguity, using an explorer subagent only when codebase context is needed. Outputs a Goal Contract for the durable /goal runtime. Triggers on "I want to...", "I need...", "let's build...", "can you help me...", "we should...", or any request where the full scope isn't immediately clear.
 ---
 
 # Runtime-Enforced Deep Clarification
 
-Narrows vague user requests into a durable Goal Contract through a deep-interview loop. Runs questions and code exploration in parallel, records hidden runtime state with `clarification_state`, and blocks Goal Contract handoff until the checklist/ambiguity gate passes.
+Narrows vague user requests into a durable Goal Contract through a deep-interview loop. Runs questions first, adds code exploration only when technical context is needed, records hidden runtime state with `clarification_state`, and blocks Goal Contract handoff until the checklist/ambiguity gate passes.
 
 ## Core Principle
 
-Ambiguity does not resolve in one pass. Multiple rounds of questions and code exploration intersect, gradually sharpening the picture. The purpose of this skill is not "writing code" — it is making "what the user wants" and "what state the codebase is in" vivid and clear.
+Ambiguity does not resolve in one pass. Multiple rounds of questions, and code exploration when needed, gradually sharpen the picture. The purpose of this skill is not "writing code" — it is making "what the user wants" clear and, for implementation/codebase-impacting requests, making "what state the codebase is in" vivid enough to draft safely.
 
 ## Hard Gates
 
 1. **One question per message.** Never bundle multiple questions into a single message.
-2. **Always use subagents.** While conversing with the user, dispatch subagents to explore the codebase in response to the user's answers.
+2. **Use explorer only when needed.** Prefer saving tokens and latency for non-code/product/wording clarification; dispatch `agent: "explorer"` when the request is clearly implementation/codebase-impacting or when technical context is missing/uncertain.
 3. **Use `clarification_state` whenever available.** Record every user answer, explorer finding, checklist update, unresolved ambiguity, accepted risk, and final Goal Contract draft.
 4. **Do not start implementation until the runtime gate says `Gate: PASS`.** Understanding must be complete at the user-intent and codebase levels.
 5. **Every question must narrow scope.** Do not repeat questions at the same level of ambiguity.
@@ -25,7 +25,7 @@ Ambiguity does not resolve in one pass. Multiple rounds of questions and code ex
 - The user says "I want to…" but the scope is unclear
 - The request is vague enough that implementation could go in multiple directions
 - The user themselves hasn't fully articulated what they want
-- There's a risk of clashing with existing codebase structure, so exploration is needed
+- There's a risk of clashing with existing codebase structure, so exploration may be needed
 
 ## When NOT To Use
 
@@ -65,11 +65,18 @@ After each answer, briefly update "what we've established so far," call `clarifi
 
 ### Track 2: Codebase Exploration (Technical Context)
 
-Use subagents to explore the codebase. Run in parallel with user Q&A.
+Use an explorer subagent only when codebase context is needed. Default to no explorer for non-code/product/wording clarification to save tokens and latency. For clear implementation/codebase-impacting requests, or whenever the technical context checklist cannot be completed from known information, launch `agent: "explorer"` and let it find/read files on demand.
 
-**How to dispatch exploration:**
+**How to decide whether to dispatch exploration:**
 
-Immediately after asking the user a question, launch a subagent via the `subagent` tool with `agent: "explorer"`. The goal is to make the user fully understand how the work plays out in the codebase. The subagent investigates:
+Dispatch a subagent via the `subagent` tool with `agent: "explorer"` when any of these are true:
+
+- The request asks to change code, tests, prompts, docs, configuration, or runtime behavior.
+- A Goal Contract would mention affected files, interfaces, tests, migrations, or regressions.
+- The `technical_context` checklist item is missing, uncertain, or would otherwise need to be accepted as risk.
+- A user answer creates a new technical ambiguity.
+
+When dispatched, the subagent investigates:
 
 - Related file structure and naming conventions
 - Existing implementation patterns (error handling, state management, data flow)
@@ -77,9 +84,9 @@ Immediately after asking the user a question, launch a subagent via the `subagen
 - Recent change history (relevant commits)
 - Test coverage status
 
-**Subagent dispatch example:**
+**Conditional subagent dispatch example:**
 
-Call the `subagent` tool in single mode:
+When the criteria above are met, call the `subagent` tool in single mode:
 - `agent`: `"explorer"`
 - `task`: A description of what to investigate
 
@@ -114,19 +121,19 @@ digraph agentic-clarification {
     "User states vague request" [shape=box];
     "Assess: what's ambiguous?" [shape=box];
     "Ask user ONE question" [shape=box];
-    "Dispatch explore subagent" [shape=box, style=dashed];
+    "Dispatch explorer if technical context is needed" [shape=box, style=dashed];
     "Receive user answer" [shape=box];
-    "Receive subagent findings" [shape=box, style=dashed];
+    "Receive explorer findings if dispatched" [shape=box, style=dashed];
     "Synthesize: still ambiguous?" [shape=diamond];
     "Present context brief" [shape=doublecircle];
 
     "User states vague request" -> "Assess: what's ambiguous?";
     "Assess: what's ambiguous?" -> "Ask user ONE question";
-    "Ask user ONE question" -> "Dispatch explore subagent" [style=dashed, label="parallel"];
+    "Ask user ONE question" -> "Dispatch explorer if technical context is needed" [style=dashed, label="conditional"];
     "Ask user ONE question" -> "Receive user answer";
-    "Dispatch explore subagent" -> "Receive subagent findings" [style=dashed];
+    "Dispatch explorer if technical context is needed" -> "Receive explorer findings if dispatched" [style=dashed];
     "Receive user answer" -> "Synthesize: still ambiguous?";
-    "Receive subagent findings" -> "Synthesize: still ambiguous?" [style=dashed];
+    "Receive explorer findings if dispatched" -> "Synthesize: still ambiguous?" [style=dashed];
     "Synthesize: still ambiguous?" -> "Ask user ONE question" [label="yes"];
     "Synthesize: still ambiguous?" -> "Present context brief" [label="no"];
 }
@@ -135,10 +142,10 @@ digraph agentic-clarification {
 **Each cycle:**
 
 1. Receive the user's answer
-2. Merge subagent results if available (if still in progress, merge in the next cycle)
+2. Merge subagent results if an explorer was dispatched (if still in progress, merge in the next cycle)
 3. Update the "remaining ambiguities" list
 4. Pick the next question (prioritize the one that most affects scope)
-5. If needed, launch additional subagents (when previous exploration revealed new areas to investigate)
+5. If needed, launch an explorer subagent when new technical context is missing or previous exploration revealed new areas to investigate
 
 ## Runtime Gate
 
@@ -168,7 +175,7 @@ When the runtime gate passes, present the user with a Goal Contract. This is the
 - **Out of scope**: [Explicitly excluded work]
 
 ### Technical Context
-[Technical facts discovered through code exploration]
+[Technical facts discovered through code exploration, or a concise note that no code exploration was needed for a non-code clarification]
 - Current implementation state
 - Affected areas
 - Existing patterns to follow
@@ -214,7 +221,7 @@ Stop and recalibrate if any of these occur:
 | Anti-Pattern | Why It Fails |
 |--------------|-------------|
 | Five questions in one message | The user gives shallow answers. Ambiguity persists. |
-| Questions without code exploration | Scope can narrow in a direction that conflicts with existing code |
+| Skipping code exploration for implementation work | Scope can narrow in a direction that conflicts with existing code |
 | Showing full subagent output to the user | Too much noise. Provide only the summary relevant to the user's context |
 | Deciding "that's enough" unilaterally | Always present the Goal Contract to the user and get confirmation |
 | Starting implementation | This skill ends at "clear context," not "implemented code" |
@@ -224,7 +231,7 @@ Stop and recalibrate if any of these occur:
 Self-check at the end of each cycle:
 
 - [ ] Did one ambiguity get resolved this cycle?
-- [ ] Is subagent exploration in progress or complete?
+- [ ] Is explorer use justified as needed or intentionally skipped for a non-code clarification?
 - [ ] Was `clarification_state` updated with the answer/finding/checklist change?
 - [ ] Is the next question based on previous answers and the current gate blockers?
 - [ ] Has progress been clearly communicated to the user?

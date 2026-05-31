@@ -6,7 +6,8 @@ The agent dynamically generates questions, selects reviewers, and drives workflo
 
 ## Features
 
-- **`/clarify`**: The agent asks dynamic, context-aware questions one at a time to resolve ambiguity. It generates questions and choices on the fly based on your request, while exploring the codebase in parallel. Ends with a structured Goal Contract.
+- **`/clarify`**: The agent asks dynamic, context-aware questions one at a time to resolve ambiguity. It generates questions and choices on the fly based on your request, using codebase exploration only when implementation or uncertain technical context makes it necessary. Ends with a structured Goal Contract.
+- **`/goal <request>`**: Simplified entrypoint. Simple investigation or explanation requests are answered directly, while complex or ambiguous verifier-worthy work is routed through clarification into a Goal Contract before durable execution.
 - **`/goal`**: Owns durable execution for queued goals, active subgoals, evidence, blockers, verifier receipts, and automatic continuation. Completion requires a `reviewer-verifier` PASS.
 - **Structured progress tracking**: Goals, subgoals, evidence, and todos are tracked through durable structured state. The footer shows live task lifecycle transitions (`running` → `completed`/`failed`) and restores progress from structured session replay events.
 - **`/ask`**: Manual test command for the `ask_user_question` tool.
@@ -62,9 +63,10 @@ pi
 
 Then use the slash commands:
 
-1. `/clarify` — resolve ambiguity and produce a Goal Contract
-2. `/goal` — auto-create/activate the durable goal, execute, gather evidence, and continue verifier-guarded work until PASS
-3. `/goal status` — inspect state without starting or continuing work
+1. `/goal <request>` — start naturally. The agent answers simple investigation/explanation requests directly and routes complex or ambiguous verifier-worthy work through clarification into a Goal Contract.
+2. `/goal` — continue or auto-start an existing drafted durable goal, gather evidence, and continue verifier-guarded work until PASS.
+3. `/goal status` — inspect state without starting or continuing work.
+4. `/clarify` — optional explicit deep-clarification entrypoint when you already know you want to shape a Goal Contract first.
 
 The `ask_user_question` tool is also available to the agent at all times — it will ask you questions autonomously whenever it detects ambiguity, even outside of `/clarify` mode.
 

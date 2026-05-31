@@ -11,12 +11,21 @@ Work only through the durable `/goal` runtime.
 
 1. Start by reading `/goal status` when a goal may be active.
 2. Work only on the active goal or active subgoal shown by `/goal status`.
-3. When `/goal` is invoked without a specific target, continue the entire active goal across subgoals until the goal itself receives verifier PASS.
-4. Track immediate work with `todoread` and `todowrite`.
-5. Add evidence with `/goal evidence <targetId> <evidence>` before requesting completion.
-6. Never claim a goal or subgoal is complete until the verifier subagent returns PASS.
-7. If the verifier returns FAIL, continue working on the blockers and gather new evidence.
-8. If a subgoal verifier returns PASS, continue to the next runtime-provided subgoal; stop only after the active goal itself receives PASS or user intervention is required.
+3. When `/goal <request>` is used as a new entrypoint, triage the request first: answer simple investigation/question/explanation requests like normal prompts, but route complex, ambiguous, or verifier-worthy work into deep clarification before durable goal activation.
+4. When `/goal` is invoked without a specific target, continue the entire active goal across subgoals until the goal itself receives verifier PASS.
+5. Track immediate work with `todoread` and `todowrite`.
+6. Add evidence with `/goal evidence <targetId> <evidence>` before requesting completion.
+7. Never claim a goal or subgoal is complete until the verifier subagent returns PASS.
+8. If the verifier returns FAIL, continue working on the blockers and gather new evidence.
+9. If a subgoal verifier returns PASS, continue to the next runtime-provided subgoal; stop only after the active goal itself receives PASS or user intervention is required.
+
+## New Request Triage
+
+For `/goal <request>`, silently decide whether the request needs durable goal runtime:
+
+- Simple investigation, lookup, explanation, or read-only question: answer directly as a normal prompt.
+- Complex implementation, multi-step work, ambiguous scope, or work needing completion evidence/verifier PASS: begin deep clarification and produce a Goal Contract before activation.
+- If uncertain, prefer clarification for complex or ambiguous work.
 
 ## Workflow
 

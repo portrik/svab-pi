@@ -8,7 +8,7 @@ export function renderGoalStatus(state: GoalState): string {
   if (!activeGoal) {
     lines.push("Active goal: none");
     lines.push(`Queued goals: ${state.goals.filter((goal) => goal.status === "queued").length}`);
-    lines.push(`Next action: ${state.goals.length === 0 ? "/clarify, then /goal" : "/goal"}`);
+    lines.push(`Next action: ${state.goals.length === 0 ? "/goal <request>" : "/goal"}`);
     return lines.join("\n");
   }
 

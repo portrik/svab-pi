@@ -61,6 +61,17 @@ describe("goal command parser", () => {
     expect(parseGoalCommand("/goal help")).toEqual({ kind: "help" });
   });
 
+  it("parses free-text requests for triage", () => {
+    expect(parseGoalCommand("/goal investigate the goal command flow")).toEqual({
+      kind: "triage",
+      request: "investigate the goal command flow",
+    });
+    expect(parseGoalCommand("/goal 목표 커맨드 흐름 조사해주세요")).toEqual({
+      kind: "triage",
+      request: "목표 커맨드 흐름 조사해주세요",
+    });
+  });
+
   it("returns errors for invalid inputs", () => {
     expect(parseGoalCommand("/goal create")).toMatchObject({ kind: "error" });
     expect(parseGoalCommand("/goal activate")).toMatchObject({ kind: "error" });
@@ -70,11 +81,11 @@ describe("goal command parser", () => {
     expect(parseGoalCommand("/goal pause a b")).toMatchObject({ kind: "error" });
     expect(parseGoalCommand("/goal resume a b")).toMatchObject({ kind: "error" });
     expect(parseGoalCommand("/goal clear")).toMatchObject({ kind: "error" });
-    expect(parseGoalCommand("/goal unknown")).toMatchObject({ kind: "error" });
   });
 
   it("describes clarify to goal and verifier guard without legacy workflow terms", () => {
-    expect(GOAL_HELP_TEXT).toContain("/clarify");
+    expect(GOAL_HELP_TEXT).toContain("/goal <request>");
+    expect(GOAL_HELP_TEXT).toContain("clarification");
     expect(GOAL_HELP_TEXT).toContain("Goal Contract");
     expect(GOAL_HELP_TEXT).toContain("reviewer-verifier");
     expect(GOAL_HELP_TEXT).not.toContain(["/", "pl", "an"].join(""));
@@ -89,7 +100,7 @@ describe("goal renderer", () => {
     const rendered = renderGoalStatus(createGoalState("run-1", NOW));
 
     expect(rendered).toContain("Active goal: none");
-    expect(rendered).toContain("Next action: /clarify, then /goal");
+    expect(rendered).toContain("Next action: /goal <request>");
     expect(renderGoalSummary(createGoalState("run-1", NOW))).toBeUndefined();
   });
 
