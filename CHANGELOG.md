@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.35.0](https://github.com/tmdgusya/roach-pi/compare/v1.34.0...v1.35.0) (2026-05-31)
+
+### Features
+
+* **docs:** add workflow video ([5698688](https://github.com/tmdgusya/roach-pi/commit/5698688021e42e62385ccbd6a37ca1a24e71bf37))
+
+### Documentation
+
+* redesign README in omp.sh editorial style ([2637fa9](https://github.com/tmdgusya/roach-pi/commit/2637fa958ad543fc4a8e4a9f5f5e7b5a1eaaec83))
+
+### Refactor
+
+* **agentic-harness:** remove stale planning leftovers ([c08ee4d](https://github.com/tmdgusya/roach-pi/commit/c08ee4d5311be7b5a403d195ca1cd9caef0af828))
+
 ## [1.34.0](https://github.com/tmdgusya/roach-pi/compare/v1.33.0...v1.34.0) (2026-05-29)
 
 ### Features
