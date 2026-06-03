@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.37.0](https://github.com/tmdgusya/roach-pi/compare/v1.36.0...v1.37.0) (2026-06-03)
+
+### Features
+
+* **footer:** per-turn cache rate + declutter statusline ([bc1b45a](https://github.com/tmdgusya/roach-pi/commit/bc1b45a7dd5eab459222d4ace03ccf9c93cad4b6))
+
 ## [1.36.0](https://github.com/tmdgusya/roach-pi/compare/v1.35.0...v1.36.0) (2026-06-03)
 
 ### Features
