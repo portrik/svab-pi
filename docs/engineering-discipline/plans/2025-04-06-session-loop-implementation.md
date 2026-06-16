@@ -78,7 +78,7 @@
     "build": "tsc --noEmit"
   },
   "dependencies": {
-    "@mariozechner/pi-coding-agent": "latest"
+    "@earendil-works/pi-coding-agent": "latest"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -795,7 +795,7 @@ Write the complete file `extensions/session-loop/commands.ts`:
 
 ```typescript
 // extensions/session-loop/commands.ts
-import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { JobScheduler, parseInterval } from './scheduler.js';
 import { LoopError } from './types.js';
 
@@ -990,7 +990,7 @@ Write the complete file `extensions/session-loop/index.ts`:
 
 ```typescript
 // extensions/session-loop/index.ts
-import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { JobScheduler } from './scheduler.js';
 import { registerLoopCommands } from './commands.js';
 

@@ -9,7 +9,7 @@
 **Tech Stack:** TypeScript ES modules, pi ExtensionAPI, Vitest, npm package-locks, Markdown docs.
 
 **Work Scope:**
-- **In scope:** pin direct pi package dependencies to `^0.72.1`; enhance agentic-harness `message_end` handling to load finalized assistant plan markdown/path references into the plan-progress footer; hide pi's built-in working loader only while harness plan-progress tasks are running; document pi v0.72 provider compatibility (`thinkingLevelMap`) and why `shouldStopAfterTurn` is not extension-implementable today.
+- **In scope:** pin direct pi package dependencies to `^0.79.4`; enhance agentic-harness `message_end` handling to load finalized assistant plan markdown/path references into the plan-progress footer; hide pi's built-in working loader only while harness plan-progress tasks are running; document pi v0.72 provider compatibility (`thinkingLevelMap`) and why `shouldStopAfterTurn` is not extension-implementable today.
 - **Out of scope:** team mode changes; `thinking_level_select` event/UI integration; custom provider registration; built-in provider additions such as Xiaomi MiMo, Cloudflare, Moonshot, DeepSeek, or Mistral; self-update behavior; changing the subagent/team orchestration model.
 
 **Verification Strategy:**
@@ -26,11 +26,11 @@
 
 ## File Structure Mapping
 
-- `extensions/agentic-harness/package.json` — pin direct pi runtime packages to `^0.72.1`.
-- `extensions/autonomous-dev/package.json` — pin direct pi runtime packages to `^0.72.1`.
-- `extensions/fff-search/package.json` — pin direct pi runtime packages to `^0.72.1`.
-- `extensions/session-loop/package.json` — pin direct pi runtime packages to `^0.72.1`.
-- `extensions/workspace-memory/package.json` — pin direct pi runtime packages to `^0.72.1`.
+- `extensions/agentic-harness/package.json` — pin direct pi runtime packages to `^0.79.4`.
+- `extensions/autonomous-dev/package.json` — pin direct pi runtime packages to `^0.79.4`.
+- `extensions/fff-search/package.json` — pin direct pi runtime packages to `^0.79.4`.
+- `extensions/session-loop/package.json` — pin direct pi runtime packages to `^0.79.4`.
+- `extensions/workspace-memory/package.json` — pin direct pi runtime packages to `^0.79.4`.
 - `package-lock.json` and `extensions/*/package-lock.json` — refresh lockfiles after package pinning.
 - `extensions/agentic-harness/plan-progress-events.ts` — add finalized assistant-message plan loading helpers.
 - `extensions/agentic-harness/tests/plan-progress-events.test.ts` — test assistant-message plan loading behavior.
@@ -75,18 +75,18 @@ const paths = [
 for (const path of paths) {
   const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
   pkg.dependencies ??= {};
-  if (pkg.dependencies['@mariozechner/pi-coding-agent']) {
-    pkg.dependencies['@mariozechner/pi-coding-agent'] = '^0.72.1';
+  if (pkg.dependencies['@earendil-works/pi-coding-agent']) {
+    pkg.dependencies['@earendil-works/pi-coding-agent'] = '^0.79.4';
   }
-  if (pkg.dependencies['@mariozechner/pi-tui']) {
-    pkg.dependencies['@mariozechner/pi-tui'] = '^0.72.1';
+  if (pkg.dependencies['@earendil-works/pi-tui']) {
+    pkg.dependencies['@earendil-works/pi-tui'] = '^0.79.4';
   }
   fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
 }
 NODE
 ```
 
-Expected: the five extension package manifests no longer contain `"latest"` or `"^0.70.2"` for `@mariozechner/pi-coding-agent`/`@mariozechner/pi-tui`.
+Expected: the five extension package manifests no longer contain `"latest"` or `"^0.70.2"` for `@earendil-works/pi-coding-agent`/`@earendil-works/pi-tui`.
 
 - [ ] **Step 2: Refresh package lockfiles without installing packages globally**
 
@@ -99,7 +99,7 @@ for dir in extensions/agentic-harness extensions/autonomous-dev extensions/fff-s
 done
 ```
 
-Expected: all relevant package-lock files resolve `@mariozechner/pi-coding-agent` to a `0.72.1` compatible version and `@mariozechner/pi-tui` to a `0.72.1` compatible version where used.
+Expected: all relevant package-lock files resolve `@earendil-works/pi-coding-agent` to a `0.72.1` compatible version and `@earendil-works/pi-tui` to a `0.72.1` compatible version where used.
 
 - [ ] **Step 3: Run dependency-focused build checks**
 
@@ -514,7 +514,7 @@ In `extensions/session-loop/README.md`, add this section after `## Architecture`
 ````md
 ## pi v0.72 Agent Loop Note
 
-pi `0.72.x` added `shouldStopAfterTurn` to the low-level `@mariozechner/pi-agent-core` loop configuration. `session-loop` does not call `agentLoop()` directly; it schedules recurring prompts through the public ExtensionAPI:
+pi `0.72.x` added `shouldStopAfterTurn` to the low-level `@earendil-works/pi-agent-core` loop configuration. `session-loop` does not call `agentLoop()` directly; it schedules recurring prompts through the public ExtensionAPI:
 
 ```ts
 pi.sendUserMessage(prompt, { deliverAs: "followUp" });
@@ -563,8 +563,8 @@ Expected: all tests and builds pass, including any existing e2e-style Vitest fil
 - [ ] **Step 2: Verify plan success criteria manually**
 
 Check each item:
-- [ ] All direct `@mariozechner/pi-coding-agent` dependencies in extension package manifests are pinned to `^0.72.1`.
-- [ ] All direct `@mariozechner/pi-tui` dependencies in extension package manifests are pinned to `^0.72.1`.
+- [ ] All direct `@earendil-works/pi-coding-agent` dependencies in extension package manifests are pinned to `^0.79.4`.
+- [ ] All direct `@earendil-works/pi-tui` dependencies in extension package manifests are pinned to `^0.79.4`.
 - [ ] `extensions/agentic-harness/index.ts` still tracks cache stats in `message_end` and now also calls `loadPlanFromAssistantMessageEnd(...)`.
 - [ ] `loadPlanFromAssistantMessageEnd(...)` loads assistant-finalized plan markdown and assistant-mentioned plan paths without clearing existing progress on unrelated assistant text.
 - [ ] `WorkingVisibilityController` hides the built-in working row only while loaded plan tasks are running and restores it afterward.

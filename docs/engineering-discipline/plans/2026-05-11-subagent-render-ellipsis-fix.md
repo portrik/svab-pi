@@ -6,7 +6,7 @@
 
 **Architecture:** Keep the fix in the UI rendering layer. The subagent execution, async registry, process management, and event parsing paths remain unchanged; only renderer input forwarding, preview formatting, and render tests change.
 
-**Tech Stack:** TypeScript, pi extension tool render callbacks, `@mariozechner/pi-tui` `Text` components, Vitest.
+**Tech Stack:** TypeScript, pi extension tool render callbacks, `@earendil-works/pi-tui` `Text` components, Vitest.
 
 **Work Scope:**
 - **In scope:** Single-mode `subagent` call rendering for partial args, single-result collapsed rendering with task preview, collapsed running-result rendering with `lastActivity` priority, focused tests, build/test verification.

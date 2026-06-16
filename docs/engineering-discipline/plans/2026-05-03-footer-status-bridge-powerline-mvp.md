@@ -6,7 +6,7 @@
 
 **Architecture:** Keep the implementation centered in `RoachFooter`, preserving its existing constructor and lifecycle. Add small pure helpers for status normalization and visible-width-safe segmented rendering, then route the normal footer lines through those helpers while keeping plan/milestone panels above the normal footer.
 
-**Tech Stack:** TypeScript, Vitest, `@mariozechner/pi-tui` width utilities, Pi extension footer API.
+**Tech Stack:** TypeScript, Vitest, `@earendil-works/pi-tui` width utilities, Pi extension footer API.
 
 **Work Scope:**
 - **In scope:** `RoachFooter` default Powerline-style segmented lines, `footerData.getExtensionStatuses()` rendering, width-safe truncation/removal behavior, focused footer tests, and required test mock update.
@@ -27,7 +27,7 @@
 - Create: `extensions/agentic-harness/tests/footer.test.ts`
   - Responsibility: Focused tests for footer statuses and width-safe rendering.
 - Modify: `extensions/agentic-harness/tests/extension.test.ts`
-  - Responsibility: Existing extension registration tests with mocked `@mariozechner/pi-tui`.
+  - Responsibility: Existing extension registration tests with mocked `@earendil-works/pi-tui`.
   - M1 changes: add `visibleWidth` to the mock because `footer.ts` will import it.
 
 ## Project Capability Discovery
@@ -53,8 +53,8 @@ Write `extensions/agentic-harness/tests/footer.test.ts` with this complete conte
 
 ```typescript
 import { describe, expect, it } from "vitest";
-import { visibleWidth } from "@mariozechner/pi-tui";
-import type { ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
+import { visibleWidth } from "@earendil-works/pi-tui";
+import type { ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
 import { RoachFooter } from "../footer.js";
 
 const stubTheme = {
@@ -187,9 +187,9 @@ Expected: FAIL. At least the status-related tests should fail because `RoachFoot
 Replace the complete contents of `extensions/agentic-harness/footer.ts` with:
 
 ```typescript
-import { truncateToWidth, visibleWidth, type Component, type TUI } from "@mariozechner/pi-tui";
-import type { Theme } from "@mariozechner/pi-coding-agent";
-import type { ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
+import { truncateToWidth, visibleWidth, type Component, type TUI } from "@earendil-works/pi-tui";
+import type { Theme } from "@earendil-works/pi-coding-agent";
+import type { ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
 import { basename } from "path";
 import { PLAN_PROGRESS_SPINNER_MS, type PlanProgressTracker } from "./plan-progress.js";
 import type { MilestoneTracker } from "./milestone-tracker.js";
@@ -442,12 +442,12 @@ export class RoachFooter implements Component {
 }
 ```
 
-- [ ] **Step 2: Update the `@mariozechner/pi-tui` mock in `extension.test.ts`**
+- [ ] **Step 2: Update the `@earendil-works/pi-tui` mock in `extension.test.ts`**
 
 In `extensions/agentic-harness/tests/extension.test.ts`, replace this mock:
 
 ```typescript
-vi.mock("@mariozechner/pi-tui", () => ({
+vi.mock("@earendil-works/pi-tui", () => ({
   Text: class MockText {},
   truncateToWidth: (text: string) => text,
 }));
@@ -456,7 +456,7 @@ vi.mock("@mariozechner/pi-tui", () => ({
 with:
 
 ```typescript
-vi.mock("@mariozechner/pi-tui", () => ({
+vi.mock("@earendil-works/pi-tui", () => ({
   Text: class MockText {},
   truncateToWidth: (text: string, width?: number) => typeof width === "number" ? text.slice(0, width) : text,
   visibleWidth: (text: string) => text.replace(/\x1b\[[0-9;]*m/g, "").length,

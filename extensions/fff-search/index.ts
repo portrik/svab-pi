@@ -5,7 +5,7 @@
  * @-mention autocomplete suggestions in the interactive editor.
  */
 
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import {
 	CustomEditor,
 	createFindToolDefinition,
@@ -14,8 +14,8 @@ import {
 	truncateHead,
 	DEFAULT_MAX_BYTES,
 	formatSize,
-} from "@mariozechner/pi-coding-agent";
-import { Text, type AutocompleteItem, type AutocompleteProvider, type AutocompleteSuggestions } from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-coding-agent";
+import { Text, type AutocompleteItem, type AutocompleteProvider, type AutocompleteSuggestions } from "@earendil-works/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { FileFinder } from "@ff-labs/fff-node";
 import type { GrepCursor, GrepMode, GrepResult, SearchResult } from "@ff-labs/fff-node";

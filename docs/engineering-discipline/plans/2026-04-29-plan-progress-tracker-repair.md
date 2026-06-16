@@ -6,7 +6,7 @@
 
 **Architecture:** Keep parsing and task matching in `PlanProgressTracker`, but make state changes observable. The footer component subscribes to tracker changes, requests a TUI render after every tracker mutation, and runs a short render tick only while at least one plan task is running so the spinner visibly animates.
 
-**Tech Stack:** TypeScript ESM, pi extension APIs, `@mariozechner/pi-tui` `Component`/`TUI`, Vitest.
+**Tech Stack:** TypeScript ESM, pi extension APIs, `@earendil-works/pi-tui` `Component`/`TUI`, Vitest.
 
 **Work Scope:**
 - **In scope:** Add tracker change notifications, add footer render scheduling/spinner ticking, wire the footer factory to pass the real `TUI`, and add regression tests for callbacks, render scheduling, and timer cleanup.

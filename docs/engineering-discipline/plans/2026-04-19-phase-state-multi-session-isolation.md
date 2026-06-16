@@ -7,7 +7,7 @@
 **Architecture:**
 Drop the global `~/.pi/extension-state.json` file that every pi session shares. Phase (`currentPhase`, `activeGoalDocument`) lives only in the process-local module closure. Cross-compaction survival is already handled by the existing `session_compact` event round-trip and stays untouched. Three behavioral guards are added on top: (a) skip phase guidance when the turn runs inside a subagent process, (b) skip phase guidance when the user prompt is a skill/command invocation, (c) auto-reset phase to idle when the current phase's terminal artifact is written.
 
-**Tech Stack:** TypeScript, vitest, `@mariozechner/pi-coding-agent` ExtensionAPI.
+**Tech Stack:** TypeScript, vitest, `@earendil-works/pi-coding-agent` ExtensionAPI.
 
 **Work Scope:**
 - **In scope:**

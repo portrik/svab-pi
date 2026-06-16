@@ -165,7 +165,7 @@
 - `cd extensions/agentic-harness && npm run build` passes.
 - `cd extensions/agentic-harness && npm test` passes.
 - Diff is limited to planned files.
-- No pi core files under `/opt/homebrew/lib/node_modules/@mariozechner/pi-coding-agent/` are modified.
+- No pi core files under `/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/` are modified.
 
 - [ ] **Step 1: Run TypeScript build**
   Run: `cd extensions/agentic-harness && npm run build`

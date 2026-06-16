@@ -6,7 +6,7 @@
 
 **Architecture:** Implement shimmer as a small pure formatting utility inside `extensions/agentic-harness`, then reuse it from the footer and from extension UI event handlers. The built-in Working row will be customized through Pi's public `ctx.ui.setWorkingMessage()` and `ctx.ui.setWorkingIndicator()` APIs; this repo does not vendor Pi core, so no global package source is patched. Footer tool display will consume richer active-tool state from existing `tool_execution_start` / `tool_execution_end` hooks.
 
-**Tech Stack:** TypeScript ESM, `@mariozechner/pi-coding-agent` extension API, `@mariozechner/pi-tui` width helpers, Vitest.
+**Tech Stack:** TypeScript ESM, `@earendil-works/pi-coding-agent` extension API, `@earendil-works/pi-tui` width helpers, Vitest.
 
 **Work Scope:**
 - **In scope:** Shimmer utility; animated Working row message via extension APIs; active tool intent tracking; footer shimmer for currently running tool intent; unit tests for shimmer/footer/extension wiring; build and test verification.
@@ -72,7 +72,7 @@
 Create `extensions/agentic-harness/shimmer.ts` with this complete content:
 
 ```ts
-import type { Theme, ThemeColor } from "@mariozechner/pi-coding-agent";
+import type { Theme, ThemeColor } from "@earendil-works/pi-coding-agent";
 
 const CLASSIC_PADDING = 10;
 const CLASSIC_SWEEP_MS = 1400;
@@ -189,7 +189,7 @@ Create `extensions/agentic-harness/tests/shimmer.test.ts` with this complete con
 
 ```ts
 import { describe, expect, it } from "vitest";
-import { visibleWidth } from "@mariozechner/pi-tui";
+import { visibleWidth } from "@earendil-works/pi-tui";
 import { shimmerSegments, shimmerText, stripAnsi } from "../shimmer.js";
 
 const theme = {

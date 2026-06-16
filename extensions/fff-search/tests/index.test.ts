@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import extension from '../index.js';
 import { FileFinder } from '@ff-labs/fff-node';
-import { createFindToolDefinition, createGrepToolDefinition } from '@mariozechner/pi-coding-agent';
+import { createFindToolDefinition, createGrepToolDefinition } from '@earendil-works/pi-coding-agent';
 
 const createTextResult = (text: string) => ({ content: [{ type: 'text', text }] });
 
@@ -12,7 +12,7 @@ vi.mock('@ff-labs/fff-node', () => ({
   },
 }));
 
-vi.mock('@mariozechner/pi-coding-agent', () => ({
+vi.mock('@earendil-works/pi-coding-agent', () => ({
   getAgentDir: () => '/tmp/pi-agent',
   truncateHead: (content: string) => ({ content, truncated: false }),
   DEFAULT_MAX_BYTES: 1024 * 1024,
@@ -28,7 +28,7 @@ vi.mock('@mariozechner/pi-coding-agent', () => ({
   },
 }));
 
-vi.mock('@mariozechner/pi-tui', () => ({
+vi.mock('@earendil-works/pi-tui', () => ({
   Text: class {
     private value = '';
     constructor(_text = '', _x = 0, _y = 0) {}

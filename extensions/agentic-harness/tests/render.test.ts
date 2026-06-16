@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import assert from "node:assert";
 import { formatTokens, formatUsage, statusIcon, formatToolCall, renderCall, renderResult } from "../render.js";
 import { emptyUsage, type SingleResult, type SubagentDetails } from "../types.js";
-import type { Theme } from "@mariozechner/pi-coding-agent";
+import type { Theme } from "@earendil-works/pi-coding-agent";
 
 const theme: Theme = {
   fg: (_color: string, text: string) => text,

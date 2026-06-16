@@ -6,11 +6,11 @@
 
 **Architecture:** The extension registers a single `ask_user_question` tool (TypeBox schema) that the agent calls autonomously when it detects ambiguity. Commands (`/clarify`, `/plan`, `/ultraplan`) delegate to the agent via `sendUserMessage` with structured prompts. Workflow state is tracked in-memory and injected into the system prompt via `before_agent_start`. Engineering discipline skills are registered via `resources_discover`.
 
-**Tech Stack:** TypeScript, `@sinclair/typebox` (schema), `@mariozechner/pi-coding-agent` (extension API), `@mariozechner/pi-tui` (TUI components), Vitest (testing)
+**Tech Stack:** TypeScript, `@sinclair/typebox` (schema), `@earendil-works/pi-coding-agent` (extension API), `@earendil-works/pi-tui` (TUI components), Vitest (testing)
 
 **Work Scope:**
 - **In scope:** Rewrite `index.ts` — remove hardcoded templates, TypeBox schema for tool, `resources_discover`, `before_agent_start`, rewrite all 4 commands, update tests
-- **Out of scope:** HUD Dashboard, SKILL.md files, pi-coding-agent core, `@mariozechner/pi-ai` dependency (not needed — no enums in tool params)
+- **Out of scope:** HUD Dashboard, SKILL.md files, pi-coding-agent core, `@earendil-works/pi-ai` dependency (not needed — no enums in tool params)
 
 **Verification Strategy:**
 - **Level:** test-suite
@@ -45,9 +45,9 @@
 Replace the full contents of `extensions/agentic-harness/index.ts` with:
 
 ```typescript
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import { Text } from "@mariozechner/pi-tui";
+import { Text } from "@earendil-works/pi-tui";
 import { homedir } from "os";
 import { join } from "path";
 

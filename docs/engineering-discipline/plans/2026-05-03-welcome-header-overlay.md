@@ -6,7 +6,7 @@
 
 **Architecture:** Extract the current startup header rendering into `welcome-ui.ts` and expose small functions for show/dismiss/toggle. Use the non-blocking `ctx.ui.setHeader(...)` path as the first implementation because it is already safe in this extension; treat overlay as an explicit future enhancement rather than a startup modal.
 
-**Tech Stack:** TypeScript, Vitest, Pi `ctx.ui.setHeader`, Pi command registration, `Text` from `@mariozechner/pi-tui`.
+**Tech Stack:** TypeScript, Vitest, Pi `ctx.ui.setHeader`, Pi command registration, `Text` from `@earendil-works/pi-tui`.
 
 **Work Scope:**
 - **In scope:** reusable welcome header factory, session-local welcome visibility controller, `/welcome on|off|toggle` command, startup show, tests for show/dismiss/restore/no duplicate header registration.
@@ -49,9 +49,9 @@
 Write `extensions/agentic-harness/welcome-ui.ts` with this complete content:
 
 ```typescript
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { keyHint, keyText, rawKeyHint } from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { keyHint, keyText, rawKeyHint } from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
 
 export type HeaderUi = {
   setHeader: (factory: any | undefined) => void;

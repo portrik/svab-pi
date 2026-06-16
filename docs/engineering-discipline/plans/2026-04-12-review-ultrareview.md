@@ -6,7 +6,7 @@
 
 **Architecture:** `/review` dispatches a self-contained review prompt to the current agent (no subagents). `/ultrareview` orchestrates a 3-stage pipeline: **finding** (10 subagents = 5 reviewer roles × 2 seeds in parallel) → **verification** (dedup + false-positive filter) → **synthesis** (structured report, saved to file + chat summary). New read-only reviewer agents are introduced without touching `DISCIPLINE_AGENTS`, preventing `ai-slop-cleaner` chain-fire.
 
-**Tech Stack:** TypeScript, `@mariozechner/pi-coding-agent` ExtensionAPI, Vitest, markdown agent definitions under `extensions/agentic-harness/agents/`.
+**Tech Stack:** TypeScript, `@earendil-works/pi-coding-agent` ExtensionAPI, Vitest, markdown agent definitions under `extensions/agentic-harness/agents/`.
 
 **Work Scope:**
 - **In scope:**

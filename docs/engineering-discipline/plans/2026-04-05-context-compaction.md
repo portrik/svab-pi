@@ -6,7 +6,7 @@
 
 **Architecture:** `session_before_compact` 훅에서 현재 phase와 활성 목표 문서를 참조하여 커스텀 요약을 생성한다. `context` 이벤트에서 오래된 tool result를 트렁케이션하는 microcompaction을 수행한다. 상태는 인메모리 + 파일 + CompactionEntry.details 3중으로 관리하며, `session_start`에서 파일로부터 복원한다.
 
-**Tech Stack:** TypeScript, `@mariozechner/pi-coding-agent` ExtensionAPI, `@mariozechner/pi-ai` (complete), `@sinclair/typebox`, Vitest
+**Tech Stack:** TypeScript, `@earendil-works/pi-coding-agent` ExtensionAPI, `@earendil-works/pi-ai` (complete), `@sinclair/typebox`, Vitest
 
 **Work Scope:**
 - **In scope:** 상태 관리 모듈, microcompaction, phase-aware full compaction, 상태 복원, 테스트
@@ -555,8 +555,8 @@ At the top of `index.ts`, add imports after existing ones:
 // After: import { runSingleAgent, runParallel, runChain } from "./subagent.js";
 import { loadState, saveState, updateState, type ExtensionState } from "./state.js";
 import { microcompactMessages, getCompactionPrompt, formatCompactSummary } from "./compaction.js";
-import { convertToLlm, serializeConversation } from "@mariozechner/pi-coding-agent";
-import { complete } from "@mariozechner/pi-ai";
+import { convertToLlm, serializeConversation } from "@earendil-works/pi-coding-agent";
+import { complete } from "@earendil-works/pi-ai";
 ```
 
 Replace the standalone `currentPhase` variable with state-backed variables:

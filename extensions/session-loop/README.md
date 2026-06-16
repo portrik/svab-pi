@@ -51,7 +51,7 @@ Minimum: 1 second. Maximum: 365 days.
 
 ## pi v0.72 Agent Loop Note
 
-pi `0.72.x` added `shouldStopAfterTurn` to the low-level `@mariozechner/pi-agent-core` loop configuration. `session-loop` does not call `agentLoop()` directly; it schedules recurring prompts through the public ExtensionAPI:
+pi `0.72.x` added `shouldStopAfterTurn` to the low-level `@earendil-works/pi-agent-core` loop configuration. `session-loop` does not call `agentLoop()` directly; it schedules recurring prompts through the public ExtensionAPI:
 
 ```ts
 pi.sendUserMessage(prompt, { deliverAs: "followUp" });

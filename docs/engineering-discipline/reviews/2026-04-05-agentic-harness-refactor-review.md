@@ -69,5 +69,5 @@ The only deviations are cosmetic: (1) commit granularity (2 commits vs 8), (2) `
 ## 6. Follow-up Actions
 
 - Consider adding a test for the `before_agent_start` handler in non-idle phases (currently only idle phase is tested).
-- The `Text` import from `@mariozechner/pi-tui` (line 3) is unused -- could be removed for cleanliness.
+- The `Text` import from `@earendil-works/pi-tui` (line 3) is unused -- could be removed for cleanliness.
 - Runtime verification of `resources_discover` with actual skill files is still pending (noted as assumption in the plan).

@@ -7,6 +7,9 @@
   ],
   "author": "tmdgusya",
   "license": "MIT",
+  "engines": {
+    "node": ">=24.16.0"
+  },
   "pi": {
     "extensions": [
       "extensions/agentic-harness/index.ts",
@@ -21,6 +24,9 @@
   },
   "dependencies": {
     "@code-yeongyu/pi-nested-agents-md": "github:code-yeongyu/pi-nested-agents-md",
+    "@earendil-works/pi-ai": "^0.79.4",
+    "@earendil-works/pi-coding-agent": "^0.79.4",
+    "@earendil-works/pi-tui": "^0.79.4",
     "@ff-labs/fff-node": "^0.6.4",
     "@sinclair/typebox": "^0.34.49",
     "diff": "^8.0.4",
@@ -29,6 +35,12 @@
     "shiki": "^4.0.2",
     "turndown": "^7.2.4",
     "turndown-plugin-gfm": "^1.0.2"
+  },
+  "overrides": {
+    "@earendil-works/pi-agent-core": "^0.79.4",
+    "@earendil-works/pi-ai": "^0.79.4",
+    "@earendil-works/pi-coding-agent": "^0.79.4",
+    "@earendil-works/pi-tui": "^0.79.4"
   },
   "bundledDependencies": [
     "@code-yeongyu/pi-nested-agents-md",

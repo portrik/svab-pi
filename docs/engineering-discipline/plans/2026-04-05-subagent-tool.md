@@ -6,7 +6,7 @@
 
 **Architecture:** Three-module design. `agents.ts` handles filesystem-based agent discovery (`.md` files with YAML frontmatter from `~/.pi/agent/agents/` and `.pi/agents/`). `subagent.ts` provides the core execution engine — process spawning via `child_process.spawn`, JSON stream parsing of `pi --mode json` output, worker-pool concurrency control, and chain mode with `{previous}` placeholder substitution. `index.ts` registers the `subagent` tool with a TypeBox schema and updates `PHASE_GUIDANCE` to reference the actual tool.
 
-**Tech Stack:** TypeScript, `@sinclair/typebox`, `@mariozechner/pi-ai` (StringEnum), Node.js `child_process`, vitest
+**Tech Stack:** TypeScript, `@sinclair/typebox`, `@earendil-works/pi-ai` (StringEnum), Node.js `child_process`, vitest
 
 **Work Scope:**
 - **In scope:** `subagent` tool (single/parallel/chain modes), agent config discovery, JSON stream parsing, concurrency control, PHASE_GUIDANCE updates, unit tests
@@ -26,7 +26,7 @@
 | `extensions/agentic-harness/agents.ts` | Create | AgentConfig type, YAML frontmatter parsing, filesystem agent discovery |
 | `extensions/agentic-harness/subagent.ts` | Create | Pi process spawn, JSON output parsing, concurrency-limited parallel execution, chain execution |
 | `extensions/agentic-harness/index.ts` | Modify | Register `subagent` tool, update PHASE_GUIDANCE to reference `subagent` tool |
-| `extensions/agentic-harness/package.json` | Modify | Add `@mariozechner/pi-ai` dependency |
+| `extensions/agentic-harness/package.json` | Modify | Add `@earendil-works/pi-ai` dependency |
 | `extensions/agentic-harness/tests/agents.test.ts` | Create | Tests for parseFrontmatter, loadAgentsFromDir |
 | `extensions/agentic-harness/tests/subagent.test.ts` | Create | Tests for extractFinalOutput, mapWithConcurrencyLimit, getPiInvocation |
 | `extensions/agentic-harness/tests/extension.test.ts` | Modify | Add subagent tool registration test, update PHASE_GUIDANCE test |
@@ -764,16 +764,16 @@ git commit -m "test: add subagent execution engine tests (extractFinalOutput, co
 - Modify: `extensions/agentic-harness/index.ts`
 - Modify: `extensions/agentic-harness/package.json`
 
-- [ ] **Step 1: Add `@mariozechner/pi-ai` to package.json dependencies**
+- [ ] **Step 1: Add `@earendil-works/pi-ai` to package.json dependencies**
 
-In `extensions/agentic-harness/package.json`, add `"@mariozechner/pi-ai": "latest"` to the `dependencies` object:
+In `extensions/agentic-harness/package.json`, add `"@earendil-works/pi-ai": "latest"` to the `dependencies` object:
 
 ```json
 {
   "dependencies": {
-    "@mariozechner/pi-ai": "latest",
-    "@mariozechner/pi-coding-agent": "latest",
-    "@mariozechner/pi-tui": "latest",
+    "@earendil-works/pi-ai": "latest",
+    "@earendil-works/pi-coding-agent": "latest",
+    "@earendil-works/pi-tui": "latest",
     "@sinclair/typebox": "^0.32.14"
   }
 }
@@ -784,7 +784,7 @@ In `extensions/agentic-harness/package.json`, add `"@mariozechner/pi-ai": "lates
 Add the following imports at the top of `extensions/agentic-harness/index.ts`, after the existing imports:
 
 ```typescript
-import { StringEnum } from "@mariozechner/pi-ai";
+import { StringEnum } from "@earendil-works/pi-ai";
 import { discoverAgents } from "./agents.js";
 import { runSingleAgent, runParallel, runChain } from "./subagent.js";
 ```
@@ -792,9 +792,9 @@ import { runSingleAgent, runParallel, runChain } from "./subagent.js";
 The full import section becomes:
 
 ```typescript
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import { StringEnum } from "@mariozechner/pi-ai";
+import { StringEnum } from "@earendil-works/pi-ai";
 import { homedir } from "os";
 import { join } from "path";
 import { discoverAgents } from "./agents.js";

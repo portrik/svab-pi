@@ -6,7 +6,7 @@
 
 **Architecture:** The review is split into independent audit slices after an initial scope inventory. Each audit reads a bounded set of implementation and test files, runs exact verification commands, and writes a dedicated review artifact. A final synthesis task merges those artifacts into one pass/fail decision and follow-up list.
 
-**Tech Stack:** TypeScript, Vitest, Node.js ESM, pi extension lifecycle events, pi TUI footer rendering, `@mariozechner/pi-coding-agent`, `@mariozechner/pi-tui`.
+**Tech Stack:** TypeScript, Vitest, Node.js ESM, pi extension lifecycle events, pi TUI footer rendering, `@earendil-works/pi-coding-agent`, `@earendil-works/pi-tui`.
 
 **Work Scope:**
 - **In scope:** Current plan tracker implementation changes related to `extensions/agentic-harness/plan-progress.ts`, `extensions/agentic-harness/plan-progress-events.ts`, `extensions/agentic-harness/index.ts`, `extensions/agentic-harness/footer.ts`, `extensions/agentic-harness/tests/plan-progress.test.ts`, `extensions/agentic-harness/tests/plan-progress-events.test.ts`, `extensions/agentic-harness/tests/render.test.ts`, and the plan/review QA documents named `2026-04-28-plan-tracker-*`.

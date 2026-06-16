@@ -6,7 +6,7 @@
 
 **Architecture:** Multi-module design under `extensions/agentic-harness/webfetch/`. `types.ts` defines shared types and clearly documents that `bytes` means returned-content bytes. `cache.ts` implements an in-memory LRU cache with 15-minute TTL. `turndown.ts` provides a lazy-initialized Turndown + GFM singleton via dynamic imports. `extractContent.ts` wraps Mozilla Readability for article content extraction. `utils.ts` ties everything together — Node.js built-in `fetch`, content-type detection, Readability-first with Turndown fallback pipeline, timeout/abort handling, and caching. **Important cache rule:** cache keys must include the effective transform mode (`auto` vs `raw/full-page`) so the same URL can safely produce different outputs. **Important truncation rule:** `maxLength` is applied only to the returned copy and must never change what is stored in cache. `render.ts` provides custom TUI rendering for fetch progress and result display. `index.ts` registers the tool via `pi.registerTool()` with a TypeBox schema.
 
-**Tech Stack:** TypeScript, Node.js built-in `fetch`, `@mozilla/readability`, `jsdom`, `turndown`, `turndown-plugin-gfm`, `@sinclair/typebox`, `@mariozechner/pi-tui`, `@mariozechner/pi-coding-agent`
+**Tech Stack:** TypeScript, Node.js built-in `fetch`, `@mozilla/readability`, `jsdom`, `turndown`, `turndown-plugin-gfm`, `@sinclair/typebox`, `@earendil-works/pi-tui`, `@earendil-works/pi-coding-agent`
 
 **Work Scope:**
 - **In scope:** `webfetch` tool with URL fetch, Readability + Turndown GFM conversion, LRU cache (15-min TTL), custom TUI rendering, input parameters (`url`, `raw`, `maxLength`), abort signal support, binary content detection, size limit (10MB), timeout (30s), unit tests. `raw: true` means: **for HTML, skip Readability and convert the full page to Markdown**. For non-HTML textual/binary responses, the extraction method remains `raw` and returns verbatim text or a binary placeholder.
@@ -942,9 +942,9 @@ Create `extensions/agentic-harness/webfetch/render.ts`:
  * Custom TUI rendering for the webfetch tool.
  */
 
-import { type Theme } from "@mariozechner/pi-coding-agent";
-import { Text, Container, Spacer } from "@mariozechner/pi-tui";
-import type { Component } from "@mariozechner/pi-tui";
+import { type Theme } from "@earendil-works/pi-coding-agent";
+import { Text, Container, Spacer } from "@earendil-works/pi-tui";
+import type { Component } from "@earendil-works/pi-tui";
 import type { WebFetchDetails } from "./types.js";
 
 function formatBytes(bytes: number): string {

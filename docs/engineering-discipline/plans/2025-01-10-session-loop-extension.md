@@ -406,7 +406,7 @@ git commit -m "feat(session-loop): implement JobScheduler with error isolation"
 
 ```typescript
 // extensions/session-loop/commands.ts
-import { ExtensionAPI } from '@mariozechner/pi-coding-agent';
+import { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { JobScheduler, parseInterval } from './scheduler.js';
 import { LoopError } from './types.js';
 
@@ -597,7 +597,7 @@ git commit -m "feat(session-loop): implement /loop, /loop-stop, /loop-list comma
 
 ```typescript
 // extensions/session-loop/index.ts
-import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { JobScheduler } from './scheduler.js';
 import { registerLoopCommands } from './commands.js';
 

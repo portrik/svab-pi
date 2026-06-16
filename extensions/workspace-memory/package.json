@@ -7,13 +7,16 @@
     "build": "tsc --noEmit"
   },
   "dependencies": {
-    "@mariozechner/pi-coding-agent": "^0.72.1",
+    "@earendil-works/pi-coding-agent": "^0.79.4",
     "@sinclair/typebox": "^0.34.49"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "typescript": "^5.9.3",
     "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=24.16.0"
   },
   "pi": {
     "extensions": [
