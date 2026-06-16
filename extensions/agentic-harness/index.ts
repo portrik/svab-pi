@@ -1,5 +1,5 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { createBashTool, isToolCallEventType } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { createBashTool, isToolCallEventType } from "@earendil-works/pi-coding-agent";
 import { Type, type TUnsafe } from "@sinclair/typebox";
 import { RoachFooter, type CacheStats, type ActiveTools, type ActiveToolStatus } from "./footer.js";
 import { resolveAgenticUiSettings } from "./ui-settings.js";
@@ -17,8 +17,8 @@ import { renderCall, renderResult, renderClarificationStateCall, renderClarifica
 import { readFileSync } from "fs";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { microcompactMessages, getCompactionPrompt, formatCompactSummary, buildGoalCompactionSummary, buildClarificationCompactionSummary } from "./compaction.js";
-import { convertToLlm, serializeConversation } from "@mariozechner/pi-coding-agent";
-import { complete } from "@mariozechner/pi-ai";
+import { convertToLlm, serializeConversation } from "@earendil-works/pi-coding-agent";
+import { complete } from "@earendil-works/pi-ai";
 import { isDisciplineAgent, augmentAgentWithKarpathy } from "./discipline.js";
 import {
   extractPlanPathsFromArgs,

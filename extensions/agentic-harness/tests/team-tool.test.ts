@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TeamRunSummary } from "../team.js";
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({
+vi.mock("@earendil-works/pi-coding-agent", () => ({
   createBashTool: vi.fn(() => ({
     name: "bash",
     label: "bash",
@@ -16,11 +16,11 @@ vi.mock("@mariozechner/pi-coding-agent", () => ({
   convertToLlm: vi.fn((x: unknown) => x),
 }));
 
-vi.mock("@mariozechner/pi-tui", () => ({
+vi.mock("@earendil-works/pi-tui", () => ({
   Text: class MockText {},
 }));
 
-vi.mock("@mariozechner/pi-ai", () => ({
+vi.mock("@earendil-works/pi-ai", () => ({
   complete: vi.fn(),
 }));
 

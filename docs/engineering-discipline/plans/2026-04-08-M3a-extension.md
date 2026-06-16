@@ -28,7 +28,7 @@
 ## Task 1: Create extensions/autonomous-dev/index.ts
 
 ```typescript
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { AutonomousDevOrchestrator } from "./orchestrator.js";
 import {
@@ -322,7 +322,7 @@ Available labels:
     "extensions": ["./index.ts"]
   },
   "dependencies": {
-    "@mariozechner/pi-coding-agent": "latest",
+    "@earendil-works/pi-coding-agent": "latest",
     "@sinclair/typebox": "^0.32.14"
   }
 }

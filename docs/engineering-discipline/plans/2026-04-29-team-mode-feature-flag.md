@@ -7,7 +7,7 @@
 **Architecture:**
 Two-pronged gate matching each entry point's existing convention. The LLM-callable `team` tool already uses **registration-level** gating (`if (isRootSession && !isTeamWorker)`), so we add `&& isTeamModeEnabled` to that condition — the tool simply won't be registered when the flag is unset, hiding it from the LLM. The user-facing `/team` slash command stays registered (so autocompletion still works) but its handler returns a guidance message when the flag is unset. A single new env-var constant `PI_ENABLE_TEAM_MODE_ENV = "PI_ENABLE_TEAM_MODE"` is co-located with the existing `PI_TEAM_WORKER_ENV` in `team.ts`.
 
-**Tech Stack:** TypeScript (ESM), `@mariozechner/pi-coding-agent` extension API, vitest, tsc.
+**Tech Stack:** TypeScript (ESM), `@earendil-works/pi-coding-agent` extension API, vitest, tsc.
 
 **Work Scope:**
 - **In scope:**

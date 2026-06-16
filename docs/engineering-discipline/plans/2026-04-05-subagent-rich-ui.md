@@ -6,7 +6,7 @@
 
 **Architecture:** Refactor the subagent system into a layered architecture: types → event processing → CLI inheritance → runner → TUI rendering → tool registration. The `onUpdate` callback passes `SubagentDetails` in the `details` field, which `renderResult` uses to show real-time progress with expandable views (Ctrl+E). Safety guards use environment variables to propagate delegation depth and agent stack across spawned processes.
 
-**Tech Stack:** TypeScript, `@mariozechner/pi-tui` (Text, Container, Markdown, Spacer), `@mariozechner/pi-coding-agent` (getMarkdownTheme, Theme, Component), `@sinclair/typebox`
+**Tech Stack:** TypeScript, `@earendil-works/pi-tui` (Text, Container, Markdown, Spacer), `@earendil-works/pi-coding-agent` (getMarkdownTheme, Theme, Component), `@sinclair/typebox`
 
 **Work Scope:**
 - **In scope:**
@@ -1463,9 +1463,9 @@ Expected: FAIL — module not found
  */
 
 import * as os from "os";
-import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
-import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
-import type { Component } from "@mariozechner/pi-tui";
+import { getMarkdownTheme } from "@earendil-works/pi-coding-agent";
+import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
+import type { Component } from "@earendil-works/pi-tui";
 import {
   type DisplayItem,
   type SingleResult,

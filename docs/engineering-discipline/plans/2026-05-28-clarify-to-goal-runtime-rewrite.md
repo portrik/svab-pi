@@ -6,7 +6,7 @@
 
 **Architecture:** Build a typed `/goal` runtime inside `extensions/agentic-harness` with reducer-style durable state, session replay events, and a ledger. Rewrite `/clarify` to produce a Goal Contract instead of a Context Brief for planning. Remove public `/plan` and milestone/long-run skill surfaces; keep only low-level primitives that the goal runtime needs (`subagent`, reviewers, todo tools, footer, storage patterns). Completion is a hard state transition guarded by a verifier subagent, not a prompt convention.
 
-**Tech Stack:** TypeScript ESM, Pi extension API, `@mariozechner/pi-coding-agent`, `@mariozechner/pi-tui`, Vitest, filesystem JSON snapshots + session custom entries.
+**Tech Stack:** TypeScript ESM, Pi extension API, `@earendil-works/pi-coding-agent`, `@earendil-works/pi-tui`, Vitest, filesystem JSON snapshots + session custom entries.
 
 **Work Scope:**
 - **In scope:** New goal state/storage/events/command/runtime/continuation modules; `/goal` command; `/clarify` handoff rewrite; removal of `/plan --milestones` and plan/milestone/long-run user-facing skills; verifier subagent guard using existing allowed verifier agent surface; goal footer/progress; compaction/session restore; docs/tests; full Windows-compatible verification.

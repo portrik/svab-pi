@@ -8,8 +8,8 @@ This document captures the editable pi core checkout prepared for the worktree-s
 - Remote: `https://github.com/earendil-works/pi.git`
 - Current HEAD: `7be8a10d`
 - Core package: `/Users/lit/.pi/agent/git/github.com/earendil-works/pi/packages/coding-agent`
-- Package name/version: `@earendil-works/pi-coding-agent@0.77.0`
-- Installed/global pi package checked for parity: `/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent`, version `0.77.0`
+- Package name/version: `@earendil-works/pi-coding-agent@0.79.4`
+- Installed/global pi package checked for parity: `/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent`, version `0.79.4`
 - Working tree after preparation: clean
 
 This is the durable editable source for core work. Do not implement core behavior by patching `node_modules` in this roach-pi extension checkout.
@@ -68,4 +68,4 @@ Focused result: 3 files passed, 91 tests passed.
 
 - `packages/coding-agent/package.json` exposes `build` and `test` scripts.
 - The root build order is important: `packages/tui`, `packages/ai`, `packages/agent`, then `packages/coding-agent`.
-- The global installed pi package and editable checkout both report `@earendil-works/pi-coding-agent@0.77.0`, so the checkout matches the active installed package version.
+- The global installed pi package and editable checkout should report `@earendil-works/pi-coding-agent@0.79.4`, so the checkout matches the active installed package version.

@@ -1,6 +1,6 @@
 import { spawn } from "child_process";
-import type { BashOperations } from "@mariozechner/pi-coding-agent";
-import { getShellConfig } from "@mariozechner/pi-coding-agent";
+import type { BashOperations } from "@earendil-works/pi-coding-agent";
+import { getShellConfig } from "@earendil-works/pi-coding-agent";
 import { resolveSandboxLaunch } from "./executor.js";
 import type { SandboxRuntimeOptions } from "./types.js";
 import { getDefaultApprovalStore } from "./approval-store.js";

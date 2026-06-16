@@ -57,8 +57,8 @@ M3 footer incremental render behavior
 
 **External dependencies:**
 
-- `@mariozechner/pi-tui`: required by M3; setup needed: no if dependencies installed. Key API: `TUI.requestRender`.
-- `@mariozechner/pi-coding-agent` extension event API: required by M2; setup needed: no, mocked in tests.
+- `@earendil-works/pi-tui`: required by M3; setup needed: no if dependencies installed. Key API: `TUI.requestRender`.
+- `@earendil-works/pi-coding-agent` extension event API: required by M2; setup needed: no, mocked in tests.
 - Pi `sessionManager.appendCustomEntry/getBranch`: required by M2; setup needed: no, mocked in tests.
 - Node.js + TypeScript + Vitest: required by all verification; setup needed: yes on fresh clone via npm install.
 - Filesystem plan loading/replay: required by M1 tests; setup needed: no beyond temp dirs.

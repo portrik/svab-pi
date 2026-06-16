@@ -11,7 +11,7 @@ pi-engineering-discipline-extension에서 `session_before_compact` 훅을 활용
   - `session_start` 이벤트에서 상태 복원
   - 요약 프롬프트: Claude Code 9섹션 구조 기반 + 엔지니어링 phase 특화 섹션
 - **Out of scope**:
-  - 코어(`@mariozechner/pi-coding-agent`) 수정
+  - 코어(`@earendil-works/pi-coding-agent`) 수정
   - 별도 요약 모델 사용 (현재 대화 모델 사용)
   - Session Memory Compaction (Claude Code의 GrowthBook 기반 경량 방식)
   - `/compact` 명령어 커스터마이징 (기본 제공 사용)
@@ -69,14 +69,14 @@ interface ContextEventResult {
 
 **3. 메시지 직렬화 유틸리티:**
 ```typescript
-import { convertToLlm, serializeConversation } from "@mariozechner/pi-coding-agent";
+import { convertToLlm, serializeConversation } from "@earendil-works/pi-coding-agent";
 // convertToLlm: AgentMessage[] → Message[]
 // serializeConversation: Message[] → string (텍스트 형태, tool result 2000자 트렁케이션)
 ```
 
 **4. LLM 호출:**
 ```typescript
-import { complete } from "@mariozechner/pi-ai";
+import { complete } from "@earendil-works/pi-ai";
 // complete(model, { messages }, { apiKey, headers, maxTokens, signal }) → AssistantMessage
 ```
 

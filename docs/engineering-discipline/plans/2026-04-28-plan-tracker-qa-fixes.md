@@ -12,7 +12,7 @@
 - `extensions/agentic-harness/index.ts` wires tool events to the tracker: plan file read/write, session lifecycle, and subagent execution start/end.
 - `extensions/agentic-harness/plan-parser.ts` already parses plan markdown and is out of scope unless tests reveal a parser regression.
 
-**Tech Stack:** TypeScript, Vitest, pi TUI (`@mariozechner/pi-tui`), pi coding agent (`@mariozechner/pi-coding-agent`).
+**Tech Stack:** TypeScript, Vitest, pi TUI (`@earendil-works/pi-tui`), pi coding agent (`@earendil-works/pi-coding-agent`).
 
 **Current verified baseline:**
 - `extensions/agentic-harness/tests/plan-progress-qa.test.ts` does **not** currently exist.

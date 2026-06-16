@@ -21,7 +21,7 @@ This review therefore verifies:
 |---|---|---|
 | `extensions/agentic-harness/footer.ts` | OK | Imports `truncateToWidth`/`visibleWidth`, keeps `RoachFooter` constructor/lifecycle, renders segmented width-safe footer lines, reads `footerData.getExtensionStatuses()`, and preserves plan/milestone panels above the normal footer. |
 | `extensions/agentic-harness/tests/footer.test.ts` | OK | Focused footer tests cover no statuses, one status, stable multiple-status ordering, empty/whitespace status filtering, long-status truncation, and narrow width fitting. |
-| `extensions/agentic-harness/tests/extension.test.ts` | OK | `@mariozechner/pi-tui` mock includes `visibleWidth` and width-aware `truncateToWidth` for the new `footer.ts` imports. |
+| `extensions/agentic-harness/tests/extension.test.ts` | OK | `@earendil-works/pi-tui` mock includes `visibleWidth` and width-aware `truncateToWidth` for the new `footer.ts` imports. |
 
 ### Acceptance Criteria Check
 

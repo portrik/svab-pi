@@ -6,7 +6,7 @@
 
 **Architecture:** Add a new `ui-settings.ts` module that resolves a `footerPreset` from environment and Pi settings files, with safe fallback to `default`. Update `RoachFooter` to consume a final optional options object and render preset layouts from a data-driven preset definition rather than scattered conditionals. Wire the resolved settings in `index.ts` when constructing `RoachFooter`.
 
-**Tech Stack:** TypeScript, Vitest, Node `fs`/`path`/`os`, Pi extension footer API, `@mariozechner/pi-tui` width utilities.
+**Tech Stack:** TypeScript, Vitest, Node `fs`/`path`/`os`, Pi extension footer API, `@earendil-works/pi-tui` width utilities.
 
 **Work Scope:**
 - **In scope:** `AgenticUiSettings`, `FooterPresetName`, settings resolution from env/global/project settings, footer preset layouts, focused settings/preset tests, index wiring.
@@ -241,9 +241,9 @@ Expected: PASS.
 In `extensions/agentic-harness/footer.ts`, change the imports/types at the top so they include `FooterPresetName` and segment ids:
 
 ```typescript
-import { truncateToWidth, visibleWidth, type Component, type TUI } from "@mariozechner/pi-tui";
-import type { Theme } from "@mariozechner/pi-coding-agent";
-import type { ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
+import { truncateToWidth, visibleWidth, type Component, type TUI } from "@earendil-works/pi-tui";
+import type { Theme } from "@earendil-works/pi-coding-agent";
+import type { ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
 import { basename } from "path";
 import { PLAN_PROGRESS_SPINNER_MS, type PlanProgressTracker } from "./plan-progress.js";
 import type { MilestoneTracker } from "./milestone-tracker.js";

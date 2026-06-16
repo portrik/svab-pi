@@ -12,7 +12,7 @@
 import mcpAdapter from "../../node_modules/pi-mcp-adapter/index.ts";
 // Use the same pi-tui the rest of this repo's extensions depend on; the host
 // renders Text from this scope identically to the adapter's own pi-tui scope.
-import { Text } from "@mariozechner/pi-tui";
+import { Text } from "@earendil-works/pi-tui";
 import { compactCallText, compactResultText } from "./compact.ts";
 
 type AnyRecord = Record<string, unknown>;

@@ -6,7 +6,7 @@
 
 **Architecture:** Extend `FooterContext` with typed accessors for git stats, thinking level, and model metadata. Compute git stats asynchronously in `index.ts` via `child_process.execFile` with a refresh timer and branch-change subscription. Rewrite the powerline renderer to use raw ANSI background/foreground sequences for solid color blocks with triangle separators (``). Map thinking levels to pi's existing `ThemeColor` palette (`thinkingLow`, `thinkingMedium`, `thinkingHigh`, etc.).
 
-**Tech Stack:** TypeScript, `@mariozechner/pi-tui`, `@mariozechner/pi-coding-agent`, `child_process`, vitest.
+**Tech Stack:** TypeScript, `@earendil-works/pi-tui`, `@earendil-works/pi-coding-agent`, `child_process`, vitest.
 
 **Work Scope:**
 - **In scope:** Background-block powerline rendering, π logo segment, model segment with "(latest)" tag, thinking level segment, detailed git stats (ahead/behind/dirty/untracked), preservation of existing plan/milestone/tools/cache segments.
@@ -394,8 +394,8 @@ Replace the top of `footer.test.ts` with:
 
 ```ts
 import { describe, expect, it } from "vitest";
-import { visibleWidth } from "@mariozechner/pi-tui";
-import type { ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
+import { visibleWidth } from "@earendil-works/pi-tui";
+import type { ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
 import { ICONS, RoachFooter, setUseNerdIcons } from "../footer.js";
 
 setUseNerdIcons(false);

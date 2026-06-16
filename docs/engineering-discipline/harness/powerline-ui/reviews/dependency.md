@@ -55,8 +55,8 @@ If each milestone directly edits `index.ts` as it goes, then M2–M5 become most
 
 ## External dependencies
 
-- `@mariozechner/pi-coding-agent`: already dependency.
-- `@mariozechner/pi-tui`: already dependency.
+- `@earendil-works/pi-coding-agent`: already dependency.
+- `@earendil-works/pi-tui`: already dependency.
 - Pi UI APIs: footer/header/custom/status/editor component/editor text APIs; feature-detect optional APIs where possible.
 - Session state APIs: needed by stash if persistence is desired.
 - Vitest/TypeScript: already present.

@@ -6,7 +6,7 @@
 
 **Architecture:** 현재 3-way 분기(Readability → full → raw)를 Claude Code처럼 2-way로 단순화: HTML은 Turndown 변환, 비-HTML은 raw. Readability 추출 레이어(`extractContent.ts` + `jsdom` + `@mozilla/readability`)를 완전히 제거하고, Turndown이 이미 제거하는 태그(`script`, `style`, `nav`, `header`, `footer`, `aside`)에 의존. Markdown 후처리에서 CSR 노이즈 패턴(Loading..., 등)을 정규식으로 필터링.
 
-**Tech Stack:** turndown, turndown-plugin-gfm (기존 유지), @mariozechner/pi-coding-agent, @mariozechner/pi-tui
+**Tech Stack:** turndown, turndown-plugin-gfm (기존 유지), @earendil-works/pi-coding-agent, @earendil-works/pi-tui
 
 **Work Scope:**
 - **In scope:**

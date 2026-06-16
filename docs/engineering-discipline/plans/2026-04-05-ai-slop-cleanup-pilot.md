@@ -159,9 +159,9 @@ git commit -m "fix: restore ask command baseline"
 Update `extensions/agentic-harness/footer.ts` imports to:
 
 ```ts
-import type { Component } from "@mariozechner/pi-tui";
-import type { Theme } from "@mariozechner/pi-coding-agent";
-import type { ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
+import type { Component } from "@earendil-works/pi-tui";
+import type { Theme } from "@earendil-works/pi-coding-agent";
+import type { ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
 import { basename } from "path";
 ```
 

@@ -1,7 +1,7 @@
 import * as os from "os";
-import { getMarkdownTheme, type Theme } from "@mariozechner/pi-coding-agent";
-import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
-import type { Component } from "@mariozechner/pi-tui";
+import { getMarkdownTheme, type Theme } from "@earendil-works/pi-coding-agent";
+import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
+import type { Component } from "@earendil-works/pi-tui";
 import {
   renderClarificationGateSummary,
   renderClarificationOneLine,

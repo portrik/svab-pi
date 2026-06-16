@@ -13,14 +13,14 @@
 | `extensions/agentic-harness/agents.ts` | EXISTS, MATCHES | All 4 exports present: AgentConfig, parseFrontmatter, loadAgentsFromDir, discoverAgents. 107 lines. |
 | `extensions/agentic-harness/subagent.ts` | EXISTS, MATCHES | All exports present: SubagentResult, getPiInvocation, extractFinalOutput, mapWithConcurrencyLimit, runSingleAgent, runParallel, runChain, MAX_PARALLEL_TASKS=8, MAX_CONCURRENCY=4. 246 lines. |
 | `extensions/agentic-harness/index.ts` | EXISTS, MATCHES | `subagent` tool registered (line 182) with 6 promptGuidelines. PHASE_GUIDANCE updated: clarifying references "subagent tool in single mode", ultraplanning references "subagent tool's parallel mode" with all 5 reviewers named. /clarify and /ultraplan prompts updated. No "Explore subagent" or "Agent tool" references remain. |
-| `extensions/agentic-harness/package.json` | EXISTS, DEVIATION | Plan specified adding `@mariozechner/pi-ai` dependency for `StringEnum`. Dependency was NOT added. See deviation note below. |
+| `extensions/agentic-harness/package.json` | EXISTS, DEVIATION | Plan specified adding `@earendil-works/pi-ai` dependency for `StringEnum`. Dependency was NOT added. See deviation note below. |
 | `extensions/agentic-harness/tests/agents.test.ts` | EXISTS, MATCHES | 8 tests: parseFrontmatter (4) + loadAgentsFromDir (4). All match plan specification. |
 | `extensions/agentic-harness/tests/subagent.test.ts` | EXISTS, MATCHES | 11 tests: extractFinalOutput (5) + mapWithConcurrencyLimit (4) + getPiInvocation (1) + Constants (1). All match plan specification. |
 | `extensions/agentic-harness/tests/extension.test.ts` | EXISTS, MATCHES | "should register subagent tool" test added (checks name, promptSnippet, 6 promptGuidelines). /clarify test asserts "subagent". Ultraplan test asserts "subagent" and "Feasibility". |
 
-**Deviation: `@mariozechner/pi-ai` not added to package.json**
+**Deviation: `@earendil-works/pi-ai` not added to package.json**
 
-The plan specified using `StringEnum` from `@mariozechner/pi-ai` for the `agentScope` parameter. During execution, a type incompatibility was discovered: `Type.Optional(TUnsafe<...>)` produced a TypeScript error. The worker used `Type.Unsafe<"user" | "project" | "both">` directly from `@sinclair/typebox` instead, which produces an identical runtime JSON Schema. This eliminated the need for the `@mariozechner/pi-ai` dependency. The deviation is functionally equivalent and avoids an unnecessary dependency.
+The plan specified using `StringEnum` from `@earendil-works/pi-ai` for the `agentScope` parameter. During execution, a type incompatibility was discovered: `Type.Optional(TUnsafe<...>)` produced a TypeScript error. The worker used `Type.Unsafe<"user" | "project" | "both">` directly from `@sinclair/typebox` instead, which produces an identical runtime JSON Schema. This eliminated the need for the `@earendil-works/pi-ai` dependency. The deviation is functionally equivalent and avoids an unnecessary dependency.
 
 ## 2. Test Results
 
@@ -58,7 +58,7 @@ The plan specified using `StringEnum` from `@mariozechner/pi-ai` for the `agentS
 | Task 5: `feat: register subagent tool and update PHASE_GUIDANCE` | `2946bdc6 feat: register subagent tool and update PHASE_GUIDANCE` | EXACT |
 | Task 6: `test: update tests for subagent tool registration and PHASE_GUIDANCE changes` | `f6c6598e test: update tests for subagent tool registration and PHASE_GUIDANCE changes` | EXACT |
 
-**Commit scope verification:** All 6 commits modify only the files specified in their respective tasks. Task 5 commit (`2946bdc6`) modifies only `extensions/agentic-harness/index.ts` (1 file, 198 insertions, 9 deletions). Note: package.json was NOT modified in this commit despite the plan specifying it, because the `@mariozechner/pi-ai` dependency was not needed.
+**Commit scope verification:** All 6 commits modify only the files specified in their respective tasks. Task 5 commit (`2946bdc6`) modifies only `extensions/agentic-harness/index.ts` (1 file, 198 insertions, 9 deletions). Note: package.json was NOT modified in this commit despite the plan specifying it, because the `@earendil-works/pi-ai` dependency was not needed.
 
 ## 5. Overall Assessment
 
