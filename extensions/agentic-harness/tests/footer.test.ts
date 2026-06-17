@@ -1,13 +1,14 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { visibleWidth } from "@earendil-works/pi-tui";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { visibleWidth, type TUI } from "@earendil-works/pi-tui";
 import type { ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
-import { ICONS, ICONS_PLAIN, RoachFooter, setUseNerdIcons } from "../footer.js";
+import { ICONS, ICONS_PLAIN, RoachFooter, setUseNerdIcons, type ActiveTools, type CacheStats } from "../footer.js";
 import { setCurrentTodos, type SimpleTodoItem } from "../simple-todo.js";
 import type { FooterGlyphMode } from "../ui-settings.js";
 
 setUseNerdIcons(false);
 
 afterEach(() => {
+  vi.useRealTimers();
   setCurrentTodos([]);
 });
 
@@ -37,6 +38,12 @@ function footerData(statuses: ReadonlyMap<string, string> = new Map()): Readonly
   };
 }
 
+type FooterTestOverrides = {
+  cacheStats?: CacheStats;
+  activeTools?: ActiveTools;
+  tui?: Pick<TUI, "requestRender"> | null;
+};
+
 function createFooter(
   statuses: ReadonlyMap<string, string> = new Map(),
   preset: "default" | "compact" | "minimal" = "default",
@@ -45,6 +52,7 @@ function createFooter(
   modelInfo = { name: "test-model", isLatest: false },
   glyphs?: FooterGlyphMode,
   goalSummary?: string,
+  overrides: FooterTestOverrides = {},
 ): RoachFooter {
   return new RoachFooter(
     stubTheme,
@@ -57,9 +65,9 @@ function createFooter(
       getThinkingLevel: () => thinkingLevel,
       getModelInfo: () => modelInfo,
     },
-    { totalInput: 100, totalCacheRead: 50 },
-    { running: new Map([["tool-1", "read"]]) },
-    null,
+    overrides.cacheStats ?? { totalInput: 100, totalCacheRead: 50 },
+    overrides.activeTools ?? { running: new Map([["tool-1", "read"]]) },
+    overrides.tui ?? null,
     { preset, glyphs, getGoalSummary: () => goalSummary },
   );
 }
@@ -221,6 +229,60 @@ describe("RoachFooter status bridge", () => {
 
     // Clean up
     setCurrentTodos([]);
+  });
+
+  it("does not schedule periodic renders for in-progress todos", () => {
+    vi.useFakeTimers();
+    setCurrentTodos([{ content: "Long-running task", status: "in_progress", priority: "high" }]);
+    const requestRender = vi.fn();
+
+    const footer = createFooter(
+      new Map(),
+      "default",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { activeTools: { running: new Map() }, tui: { requestRender } },
+    );
+
+    vi.advanceTimersByTime(1_200);
+
+    expect(requestRender).not.toHaveBeenCalled();
+    footer.dispose();
+  });
+
+  it("does not schedule periodic renders for active tools", () => {
+    vi.useFakeTimers();
+    const requestRender = vi.fn();
+
+    const footer = createFooter(
+      new Map(),
+      "default",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { activeTools: { running: new Map([["tool-1", "read"]]) }, tui: { requestRender } },
+    );
+
+    vi.advanceTimersByTime(1_200);
+
+    expect(requestRender).not.toHaveBeenCalled();
+    footer.dispose();
+  });
+
+  it("renders active tool text stably across time", () => {
+    vi.useFakeTimers();
+    const footer = createFooter();
+    const first = footer.render(150).join("\n");
+
+    vi.advanceTimersByTime(1_000);
+    const second = footer.render(150).join("\n");
+
+    expect(second).toBe(first);
   });
 
   it("omits the goal segment when no active goal summary exists", () => {

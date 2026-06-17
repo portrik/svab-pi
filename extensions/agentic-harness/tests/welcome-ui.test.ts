@@ -14,7 +14,6 @@ import {
   showWelcomeHeader,
   toggleWelcomeHeader,
 } from "../welcome-ui.js";
-import { SHIMMER_SWEEP_MS } from "../shimmer.js";
 
 function ui() {
   return {
@@ -32,8 +31,6 @@ const shimmerTheme = {
   ...theme,
   getFgAnsi: (color: string) => color === "warning" ? "\x1b[33m" : "\x1b[36m",
 } as any;
-
-const SHIMMER_HIGHLIGHT_ANSI = "\x1b[38;2;241;248;242m";
 
 function render(component: { render(width: number): string[] }): string {
   return component.render(120).join("\n");
@@ -53,38 +50,30 @@ describe("welcome header controller", () => {
     expect(rendered).toContain("/clarify");
   });
 
-  it("keeps the banner shimmer running while the header is shown", () => {
+  it("renders a stable static banner even when shimmer-capable theme APIs exist", () => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
-
-    const component = createWelcomeHeader()({ requestRender: vi.fn() } as any, shimmerTheme);
+    const requestRender = vi.fn();
+    const component = createWelcomeHeader()({ requestRender } as any, shimmerTheme);
 
     const initialRender = render(component);
-    expect(initialRender).toContain("\x1b[");
-    expect(initialRender).toContain(SHIMMER_HIGHLIGHT_ANSI);
-    expect(initialRender).not.toContain("\x1b[33m");
-
     vi.setSystemTime(350);
-    expect(render(component)).not.toBe(initialRender);
+    expect(render(component)).toBe(initialRender);
 
-    vi.setSystemTime(SHIMMER_SWEEP_MS * 3);
-    const laterRender = render(component);
-
-    expect(laterRender).toContain("\x1b[");
-    expect(laterRender).toContain("Engineering Discipline Extension");
+    vi.advanceTimersByTime(1_000);
+    expect(requestRender).not.toHaveBeenCalled();
+    expect(initialRender).toContain("Engineering Discipline Extension");
   });
 
-  it("clears the shimmer timer on dispose", () => {
+  it("does not create a periodic shimmer timer", () => {
     vi.useFakeTimers();
-    vi.setSystemTime(0);
-    const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval");
+    const setIntervalSpy = vi.spyOn(globalThis, "setInterval");
     const requestRender = vi.fn();
 
-    const component = createWelcomeHeader()({ requestRender } as any, shimmerTheme);
-    component.dispose?.();
+    createWelcomeHeader()({ requestRender } as any, shimmerTheme);
     vi.advanceTimersByTime(80);
 
-    expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
+    expect(setIntervalSpy).not.toHaveBeenCalled();
     expect(requestRender).not.toHaveBeenCalled();
   });
 

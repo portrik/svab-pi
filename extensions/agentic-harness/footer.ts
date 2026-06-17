@@ -2,10 +2,8 @@ import { truncateToWidth, visibleWidth, type Component, type TUI } from "@earend
 import type { Theme, ThemeColor } from "@earendil-works/pi-coding-agent";
 import type { ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
 import { basename } from "path";
-import { PLAN_PROGRESS_SPINNER_MS } from "./harness-progress.js";
 import type { FooterGlyphMode, FooterPresetName } from "./ui-settings.js";
 import { getCurrentTodos, subscribeOnChange, getTodoMarker, type SimpleTodoItem } from "./simple-todo.js";
-import { shimmerText, type ShimmerPalette } from "./shimmer.js";
 
 // Types
 
@@ -171,13 +169,6 @@ function getExtensionStatusText(statuses: ReadonlyMap<string, string>): string |
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
-const ACTIVE_TOOL_SHIMMER_PALETTE: ShimmerPalette = {
-  low: "dim",
-  mid: "accent",
-  high: "warning",
-  bold: true,
-};
-
 function normalizeActiveToolStatus(value: string | ActiveToolStatus): ActiveToolStatus {
   return typeof value === "string"
     ? { name: value, startedAt: 0 }
@@ -241,7 +232,6 @@ export class RoachFooter implements Component {
   private glyphs: FooterGlyphMode;
   private getGoalSummary: () => string | undefined;
   private unsubscribeTodo: (() => void) | null = null;
-  private spinnerTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     theme: Theme,
@@ -262,35 +252,16 @@ export class RoachFooter implements Component {
     this.getGoalSummary = options.getGoalSummary ?? (() => undefined);
     this.tui = tui;
     this.unsubscribeTodo = subscribeOnChange(() => this.schedulePlanRender());
-    this.updateSpinnerTimer();
   }
 
   invalidate() { this.schedulePlanRender(); }
 
   dispose() {
-    if (this.spinnerTimer) { clearInterval(this.spinnerTimer); this.spinnerTimer = null; }
     this.unsubscribeTodo?.(); this.unsubscribeTodo = null;
   }
 
   private schedulePlanRender() {
-    this.updateSpinnerTimer();
     this.tui?.requestRender();
-  }
-
-  private hasAnimatedFooterContent(): boolean {
-    return getCurrentTodos().some((t) => t.status === "in_progress") || this.activeTools.running.size > 0;
-  }
-
-  private updateSpinnerTimer() {
-    const has = this.hasAnimatedFooterContent();
-    if (has && !this.spinnerTimer) {
-      this.spinnerTimer = setInterval(() => {
-        if (!this.hasAnimatedFooterContent()) { this.updateSpinnerTimer(); return; }
-        this.tui?.requestRender();
-      }, PLAN_PROGRESS_SPINNER_MS);
-    } else if (!has && this.spinnerTimer) {
-      clearInterval(this.spinnerTimer); this.spinnerTimer = null;
-    }
   }
 
   private renderSimpleTodos(width: number): string[] {
@@ -335,7 +306,6 @@ export class RoachFooter implements Component {
   }
 
   render(width: number): string[] {
-    this.updateSpinnerTimer();
     const normalLines = this.renderNormalFooter(width);
     const border = normalLines[0];
 
@@ -436,7 +406,7 @@ export class RoachFooter implements Component {
     if (activeToolText) {
       segs.set("tools", {
         id: "tools",
-        text: shimmerText(activeToolText, this.theme, ACTIVE_TOOL_SHIMMER_PALETTE),
+        text: activeToolText,
         icon: icons.tool,
         color: "accent",
         priority: 4,

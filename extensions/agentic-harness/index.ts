@@ -3,7 +3,6 @@ import { createBashTool, isToolCallEventType } from "@earendil-works/pi-coding-a
 import { Type, type TUnsafe } from "@sinclair/typebox";
 import { RoachFooter, type CacheStats, type ActiveTools, type ActiveToolStatus } from "./footer.js";
 import { resolveAgenticUiSettings } from "./ui-settings.js";
-import { shimmerText, type ShimmerPalette } from "./shimmer.js";
 import { registerWelcomeCommand, showWelcomeHeader } from "./welcome-ui.js";
 import { registerEditorStashCommands } from "./editor-stash.js";
 import { installEditorComposition } from "./editor-composition.js";
@@ -76,6 +75,7 @@ import { applyAndPersistClarificationCommand, loadClarificationState, persistCla
 import { extractClarificationStateReplayEventsFromSessionEntries, restoreClarificationStateFromSnapshotAndEvents } from "./clarification-events.js";
 import { renderClarificationGateSummary, type ClarificationCommand, type ClarificationGoalContract, type ClarificationState } from "./clarification-state.js";
 import { resolveSessionScopedRunId } from "./runtime-run-id.js";
+import { installScrollSafeTuiPatch, setScrollSafeRenderQuiet } from "./tui-scroll-safe.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -178,19 +178,13 @@ let currentClarificationCompactionSummary: string | null = null;
 let latestClarificationState: ClarificationState | null = null;
 let latestClarificationRootDir: string | null = null;
 const goalFooterInvalidators = new Set<() => void>();
-const WORKING_SHIMMER_INTERVAL_MS = 80;
+const WORKING_INDICATOR_INTERVAL_MS = 80;
 const WORKING_BASE_MESSAGE = "Working…";
-const WORKING_SHIMMER_PALETTE: ShimmerPalette = {
-  low: "dim",
-  mid: "accent",
-  high: "warning",
-  bold: true,
-};
-const WORKING_SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+const WORKING_SPINNER_FRAME = "⠋";
 
 let workingUiContext: any | null = null;
+let scrollSafeTuiContext: unknown | null = null;
 let workingMessageBase = WORKING_BASE_MESSAGE;
-let workingMessageTimer: ReturnType<typeof setInterval> | null = null;
 
 function formatToolIntent(toolName: string, intent: unknown): string | undefined {
   if (typeof intent === "string" && intent.trim().length > 0) return intent.trim();
@@ -205,34 +199,26 @@ function currentWorkingBaseMessage(activeTools: ActiveTools): string {
   return current?.intent?.trim() || current?.name || WORKING_BASE_MESSAGE;
 }
 
-function applyWorkingMessageFrame(ctx: any): void {
+function applyWorkingMessage(ctx: any): void {
   if (!ctx?.ui?.setWorkingMessage || !ctx?.ui?.theme) return;
-  ctx.ui.setWorkingMessage(shimmerText(workingMessageBase, ctx.ui.theme, WORKING_SHIMMER_PALETTE));
+  ctx.ui.setWorkingMessage(ctx.ui.theme.fg("accent", workingMessageBase));
 }
 
 function configureWorkingIndicator(ctx: any): void {
   if (!ctx?.ui?.setWorkingIndicator || !ctx?.ui?.theme) return;
   ctx.ui.setWorkingIndicator({
-    frames: WORKING_SPINNER_FRAMES.map((frame) => ctx.ui.theme.fg("accent", frame)),
-    intervalMs: WORKING_SHIMMER_INTERVAL_MS,
+    frames: [ctx.ui.theme.fg("accent", WORKING_SPINNER_FRAME)],
+    intervalMs: WORKING_INDICATOR_INTERVAL_MS,
   });
 }
 
-function startWorkingMessageShimmer(ctx: any): void {
+function showWorkingMessage(ctx: any): void {
   workingUiContext = ctx;
   configureWorkingIndicator(ctx);
-  applyWorkingMessageFrame(ctx);
-  if (workingMessageTimer) return;
-  workingMessageTimer = setInterval(() => {
-    if (workingUiContext) applyWorkingMessageFrame(workingUiContext);
-  }, WORKING_SHIMMER_INTERVAL_MS);
+  applyWorkingMessage(ctx);
 }
 
-function stopWorkingMessageShimmer(): void {
-  if (workingMessageTimer) {
-    clearInterval(workingMessageTimer);
-    workingMessageTimer = null;
-  }
+function clearWorkingMessage(): void {
   if (workingUiContext?.ui?.setWorkingMessage) workingUiContext.ui.setWorkingMessage();
   workingUiContext = null;
   workingMessageBase = WORKING_BASE_MESSAGE;
@@ -240,7 +226,7 @@ function stopWorkingMessageShimmer(): void {
 
 function refreshWorkingMessageFromTools(ctx: any, activeTools: ActiveTools): void {
   workingMessageBase = currentWorkingBaseMessage(activeTools);
-  if (workingUiContext || activeTools.running.size > 0) startWorkingMessageShimmer(ctx);
+  if (workingUiContext || activeTools.running.size > 0) showWorkingMessage(ctx);
 }
 function extractExplicitPlanTaskIdsFromArgs(args: unknown): number[] {
   return [...new Set(subagentItemRecords(args)
@@ -1145,7 +1131,9 @@ export default function (pi: ExtensionAPI) {
   preferTodoSurfaceTools(pi);
 
   pi.on("session_shutdown", async (_event, _ctx) => {
-    stopWorkingMessageShimmer();
+    setScrollSafeRenderQuiet(false, scrollSafeTuiContext);
+    scrollSafeTuiContext = null;
+    clearWorkingMessage();
     harnessProgress = null;
     await cleanupActiveTeamTmuxResources();
   });
@@ -1245,7 +1233,7 @@ Do not start multi-step implementation without a clear understanding of what the
 
   pi.on("before_agent_start", async (event, ctx) => {
     workingMessageBase = currentWorkingBaseMessage(activeTools);
-    startWorkingMessageShimmer(ctx);
+    showWorkingMessage(ctx);
 
     // Keep the appended system prompt suffix deterministic across turns so
     // workflow phase changes, runtime state, and agent discovery cannot perturb
@@ -2260,7 +2248,7 @@ Do not start multi-step implementation without a clear understanding of what the
         cacheStats.lastInput = usage.input;
         cacheStats.lastCacheRead = usage.cacheRead;
       }
-      stopWorkingMessageShimmer();
+      clearWorkingMessage();
     }
   });
 
@@ -2270,6 +2258,7 @@ Do not start multi-step implementation without a clear understanding of what the
       intent: formatToolIntent(event.toolName, (event as any).intent),
       startedAt: Date.now(),
     } satisfies ActiveToolStatus);
+    setScrollSafeRenderQuiet(true, scrollSafeTuiContext);
     refreshWorkingMessageFromTools(ctx, activeTools);
 
     if (event.toolName === "subagent") {
@@ -2287,6 +2276,9 @@ Do not start multi-step implementation without a clear understanding of what the
 
   pi.on("tool_execution_end", async (event, ctx) => {
     activeTools.running.delete(event.toolCallId);
+    if (activeTools.running.size === 0) {
+      setScrollSafeRenderQuiet(false, scrollSafeTuiContext);
+    }
     refreshWorkingMessageFromTools(ctx, activeTools);
 
     if (event.toolName === "subagent") {
@@ -2321,7 +2313,8 @@ Do not start multi-step implementation without a clear understanding of what the
     cacheStats.lastInput = 0;
     cacheStats.lastCacheRead = 0;
     activeTools.running.clear();
-    stopWorkingMessageShimmer();
+    setScrollSafeRenderQuiet(false, scrollSafeTuiContext);
+    clearWorkingMessage();
     toolCallArgsById.clear();
     planTaskIdsByToolCallId.clear();
     const branchEntries = ctx.sessionManager?.getBranch?.() ?? [];
@@ -2387,6 +2380,8 @@ Do not start multi-step implementation without a clear understanding of what the
     }
 
     ctx.ui.setFooter((tui, theme, footerData) => {
+      scrollSafeTuiContext = tui;
+      installScrollSafeTuiPatch(tui);
       let gitStats: GitStats = { ahead: 0, behind: 0, dirty: 0, untracked: 0 };
 
       async function refreshGitStats() {
