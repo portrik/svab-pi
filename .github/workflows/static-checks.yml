@@ -1,0 +1,74 @@
+name: Static Checks
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  extension-checks:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: agentic-harness
+            working_directory: extensions/agentic-harness
+            install_command: npm ci
+            check_command: |
+              npm test
+              npm run build
+          - name: fff-search
+            working_directory: extensions/fff-search
+            install_command: npm ci
+            check_command: |
+              npm test
+              npm run build
+          - name: session-loop
+            working_directory: extensions/session-loop
+            install_command: npm ci
+            check_command: |
+              npm test
+              npm run build
+          - name: workspace-memory
+            working_directory: extensions/workspace-memory
+            install_command: npm ci
+            check_command: |
+              npm test
+              npm run build
+          - name: pi-code-previews
+            working_directory: extensions/pi-code-previews
+            install_command: npm ci
+            check_command: |
+              npm test
+              npm run check
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.16.0"
+
+      - name: Install dependencies
+        run: ${{ matrix.install_command }}
+        working-directory: ${{ matrix.working_directory }}
+
+      - name: Run checks
+        run: ${{ matrix.check_command }}
+        working-directory: ${{ matrix.working_directory }}
+
+  docs-check:
+    name: docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.16.0"
+
+      - name: Test docs site
+        run: node --test tests/docs-index-workflow-video.test.mjs

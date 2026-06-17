@@ -28,8 +28,8 @@ const SHORTCUT_CLEAR = "\x0b"; // Ctrl+K
 const SHORTCUT_SAVE_KEY = "ctrl+s";
 const SHORTCUT_RESTORE_KEY = "ctrl+r";
 const SHORTCUT_CLEAR_KEY = "ctrl+k";
-const DECORATED_EDITOR_SYMBOL = Symbol.for("roach-pi.editor-composition.decorated-editor");
-const BASE_FACTORY_SYMBOL = Symbol.for("roach-pi.editor-composition.base-factory");
+const DECORATED_EDITOR_SYMBOL = Symbol.for("svab-pi.editor-composition.decorated-editor");
+const BASE_FACTORY_SYMBOL = Symbol.for("svab-pi.editor-composition.base-factory");
 
 function renderStatusLine(width: number, stash: EditorStash): string {
   const state = stash.hasValue() ? `stash ${stash.getLength()}c` : "stash empty";

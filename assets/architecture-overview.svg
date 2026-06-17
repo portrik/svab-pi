@@ -1,6 +1,6 @@
 <svg width="1080" height="560" viewBox="0 0 1080 560" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">ROACH PI architecture overview</title>
-  <desc id="desc">Module map showing all ROACH PI extensions: agentic-harness, fff-search, session-loop, workspace-memory, autonomous-dev, plus bundled LSP and nested-agents.</desc>
+  <title id="title">Šváb Pi architecture overview</title>
+  <desc id="desc">Module map showing all Šváb Pi extensions: agentic-harness, fff-search, session-loop, workspace-memory, autonomous-dev, plus bundled LSP and nested-agents.</desc>
 
   <rect width="1080" height="560" rx="28" fill="#09090B"/>
 

@@ -1,9 +1,5 @@
 <p align="center">
-  <img src="assets/hero.svg" alt="ROACH PI — engineering discipline for pi" width="100%">
-</p>
-
-<p align="center">
-  <img src="assets/roach-pi-mascot.png" alt="ROACH PI mascot" width="280">
+  <img src="assets/hero.svg" alt="Šváb Pi — engineering discipline for pi" width="100%">
 </p>
 
 <p align="center">
@@ -28,7 +24,7 @@
 
 ## Table of Contents
 
-- [What is ROACH PI?](#what-is-roach-pi)
+- [What is Šváb Pi?](#what-is-svab-pi)
 - [Architecture](#eight-extensions-one-loop)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
@@ -51,12 +47,12 @@
 
 ---
 
-## What is _ROACH PI_?
+## What is _Šváb Pi_?
 
-ROACH PI is an extension suite for the pi coding agent. It turns a normal coding session into a disciplined engineering loop:
+Šváb Pi is an extension suite for the pi coding agent. It turns a normal coding session into a disciplined engineering loop:
 
 <p align="center">
-  <img src="assets/workflow-goal-preview.svg" alt="ROACH PI workflow: clarify → goal → verifier-guarded continuation" width="88%">
+  <img src="assets/workflow-goal-preview.svg" alt="Šváb Pi workflow: clarify → goal → verifier-guarded continuation" width="88%">
 </p>
 
 It is intentionally inspectable: commands, tools, hooks, agents, and skills are plain TypeScript and Markdown in this repository.
@@ -68,7 +64,7 @@ It is intentionally inspectable: commands, tools, hooks, agents, and skills are 
 Eight bundled extensions, one disciplined engineering loop:
 
 <p align="center">
-  <img src="assets/architecture-overview.svg" alt="ROACH PI extension architecture overview" width="88%">
+  <img src="assets/architecture-overview.svg" alt="Šváb Pi extension architecture overview" width="88%">
 </p>
 
 ---
@@ -76,7 +72,7 @@ Eight bundled extensions, one disciplined engineering loop:
 ## Installation
 
 ```bash
-pi install git:github.com/tmdgusya/roach-pi
+pi install git:github.com/portrik/svab-pi
 ```
 
 Restart `pi`, then run setup once:
@@ -85,10 +81,10 @@ Restart `pi`, then run setup once:
 /setup
 ```
 
-`/setup` writes `quietStartup: true` to `~/.pi/agent/settings.json` so ROACH PI can own the startup banner instead of duplicating pi's default extension listing.
+`/setup` writes `quietStartup: true` to `~/.pi/agent/settings.json` so Šváb Pi can own the startup banner instead of duplicating pi's default extension listing.
 
 > [!WARNING]
-> If you have the `superpowers` skill installed, remove it before using ROACH PI. It can define skill names that collide with this extension's bundled skills, and pi does not guarantee extension override order for duplicate skills.
+> If you have the `superpowers` skill installed, remove it before using Šváb Pi. It can define skill names that collide with this extension's bundled skills, and pi does not guarantee extension override order for duplicate skills.
 
 ---
 
@@ -149,7 +145,7 @@ The output is a **Goal Contract** — a structured summary of the objective, sco
 The `subagent` tool delegates work to specialized agents running as separate `pi` processes.
 
 <p align="center">
-  <img src="assets/subagent-modes.svg" alt="ROACH PI subagent modes: single, parallel, chain, async" width="88%">
+  <img src="assets/subagent-modes.svg" alt="Šváb Pi subagent modes: single, parallel, chain, async" width="88%">
 </p>
 
 Supported modes:
@@ -182,7 +178,7 @@ Catch problems before they ship.
 The bundled FFF extension upgrades pi's file and content search with git-aware ranking and frecency.
 
 <p align="center">
-  <img src="assets/fff-search-preview.svg" alt="ROACH PI FFF search: find, grep, multi_grep, @ autocomplete" width="88%">
+  <img src="assets/fff-search-preview.svg" alt="Šváb Pi FFF search: find, grep, multi_grep, @ autocomplete" width="88%">
 </p>
 
 - **`find`** — fuzzy file name search with frecency and git-aware ranking
@@ -243,7 +239,7 @@ Configuration reads standard MCP files automatically: `~/.config/mcp/mcp.json`, 
 ## Memory that _recalls_.
 
 <p align="center">
-  <img src="assets/lsp-memory-preview.svg" alt="ROACH PI LSP tools and workspace memory save/recall flow" width="88%">
+  <img src="assets/lsp-memory-preview.svg" alt="Šváb Pi LSP tools and workspace memory save/recall flow" width="88%">
 </p>
 
 Workspace memory stores important findings as structured records under pi's agent directory, scoped by workspace. It recalls relevant records into future sessions automatically.

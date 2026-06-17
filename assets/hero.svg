@@ -1,6 +1,6 @@
 <svg width="1280" height="640" viewBox="0 0 1280 640" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">ROACH PI hero</title>
-  <desc id="desc">A terminal themed illustration showing ROACH PI clarify-to-goal runtime orchestration, review, search, memory, and subagents.</desc>
+  <title id="title">Šváb Pi hero</title>
+  <desc id="desc">A terminal themed illustration showing Šváb Pi clarify-to-goal runtime orchestration, review, search, memory, and subagents.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="640" gradientUnits="userSpaceOnUse">
       <stop stop-color="#09090B"/>
@@ -30,9 +30,9 @@
   <circle cx="166" cy="122" r="8" fill="#EF4444"/>
   <circle cx="194" cy="122" r="8" fill="#F59E0B"/>
   <circle cx="222" cy="122" r="8" fill="#22C55E"/>
-  <text x="260" y="130" fill="#94A3B8" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">roach-pi — engineering discipline for pi</text>
+  <text x="260" y="130" fill="#94A3B8" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">svab-pi — engineering discipline for pi</text>
 
-  <text x="176" y="222" fill="#F8FAFC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="66" font-weight="800">ROACH PI</text>
+  <text x="176" y="222" fill="#F8FAFC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="66" font-weight="800">Šváb Pi</text>
   <text x="176" y="270" fill="#CBD5E1" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="26">Deep clarify, durable goals, verifier guard, subagents, memory, LSP, and fast search for pi.</text>
 
   <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="19">

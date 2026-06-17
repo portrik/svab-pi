@@ -50,7 +50,7 @@ export function createSettingsItems(current: CodePreviewSettings): SettingItem[]
       id: "compactPreviews",
       label: "Compact tool output",
       description:
-        "Collapse read, grep, find, ls, and bash results to a single Claude-Code-style summary line (e.g. \"Read 200 lines · expand\"). Expand any result to see full output.",
+        'Collapse read, grep, find, ls, and bash results to a single Claude-Code-style summary line (e.g. "Read 200 lines · expand"). Expand any result to see full output.',
       currentValue: current.compactPreviews ? "on" : "off",
       values: ["on", "off"],
     },

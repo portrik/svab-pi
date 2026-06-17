@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for your interest in contributing to ROACH PI! This document outlines the process.
+Thank you for your interest in contributing to Šváb Pi! This document outlines the process.
 
 ## Design Philosophy
 
@@ -18,7 +18,7 @@ We'd rather have a well-done simple tool than a half-working complex system.
 
 **All feature proposals must be discussed on GitHub Discussions before implementation.**
 
-1. Open a new discussion in the [Ideas](https://github.com/tmdgusya/roach-pi/discussions/new?category=Ideas) category
+1. Open a new discussion in the [Ideas](https://github.com/portrik/svab-pi/discussions/new?category=Ideas) category
 2. Describe the feature, its motivation, and expected behavior
 3. Wait for feedback before writing any code
 
@@ -28,7 +28,7 @@ Pull requests that add features without a prior discussion will not be reviewed.
 
 ## Bug Reports
 
-Bug reports can be filed directly as [GitHub Issues](https://github.com/tmdgusya/roach-pi/issues/new). Please include:
+Bug reports can be filed directly as [GitHub Issues](https://github.com/portrik/svab-pi/issues/new). Please include:
 
 - **Reproduction steps** — what you did, what you expected, what happened
 - **Environment** — pi version, Node.js version, OS
@@ -38,7 +38,7 @@ Bug reports can be filed directly as [GitHub Issues](https://github.com/tmdgusya
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/tmdgusya/roach-pi.git
+   git clone https://github.com/portrik/svab-pi.git
    ```
 2. Install dependencies:
    ```bash
@@ -63,7 +63,7 @@ For changes to the lightweight native `team` tool, also verify before merge:
 
 - `extensions/agentic-harness/README.md` has exactly one `## Lightweight Native Team Mode` section and lists only shipped behavior as shipped.
 - Deferred parity remains explicit for persistent resume, recorded inbox/outbox, heartbeat/status monitoring, staged pipelines, tmux runtime/live visualization, and default worktree-per-worker isolation unless those features are implemented and tested.
-- `docs/engineering-discipline/reviews/2026-04-27-roach-pi-team-mode-verification.md` contains current command evidence.
+- `docs/engineering-discipline/reviews/2026-04-27-svab-pi-team-mode-verification.md` contains current command evidence.
 - Lint status is documented; `extensions/agentic-harness` currently has no `lint` script.
 - The PR uses conventional commits that match the change type, such as `feat(agentic-harness):`, `test(agentic-harness):`, `docs(agentic-harness):`, or `ci:`.
 

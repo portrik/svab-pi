@@ -1,6 +1,6 @@
-# Pi Engineering Discipline Extension
+# Šváb Pi Agentic Harness
 
-An advanced extension for the [pi coding agent](https://github.com/badlogic/pi-mono), designed to bring strict engineering discipline and agentic orchestration to your workflow.
+An advanced extension for the [pi coding agent](https://github.com/badlogic/pi-mono), designed to bring Šváb Pi's strict engineering discipline and agentic orchestration to your workflow.
 
 The agent dynamically generates questions, selects reviewers, and drives workflow phases autonomously — no hardcoded templates or fixed question sets.
 
@@ -26,11 +26,7 @@ The extension uses three key mechanisms:
 
 ## Prerequisites
 
-This extension relies on the core engineering discipline skills (the LLM rulesets). **Before using this extension**, install the skills:
-
-👉 **[tmdgusya/engineering-discipline](https://github.com/tmdgusya/engineering-discipline)**
-
-The extension registers the skill paths automatically via `resources_discover`, so they will be available in the agent's system prompt.
+The core discipline skills are bundled with Šváb Pi and registered automatically via `resources_discover`, so they are available in the agent's system prompt.
 
 By default this is compatibility behavior: non-conflicting user skills remain available.
 For colliding skill names, precedence follows discovery order.
@@ -50,7 +46,7 @@ Team-mode thinking-level UI is intentionally not part of this extension's defaul
 ## Installation
 
 ```bash
-pi install git:github.com/tmdgusya/pi-engineering-discipline-extension
+pi install git:github.com/portrik/svab-pi
 ```
 
 ## Usage
@@ -188,11 +184,11 @@ If a worker fails, the tmux session is intentionally preserved so the pane, visi
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/tmdgusya/pi-engineering-discipline-extension.git ~/.pi/agent/extensions/agentic-harness
+   git clone https://github.com/portrik/svab-pi.git ~/.pi/agent/extensions/svab-pi
    ```
 2. Install dependencies:
    ```bash
-   cd ~/.pi/agent/extensions/agentic-harness
+   cd ~/.pi/agent/extensions/svab-pi/extensions/agentic-harness
    npm install
    ```
 3. Type `/reload` in the `pi` terminal to apply changes.

@@ -13,12 +13,12 @@ export type HeaderUi = {
 let welcomeVisible = true;
 
 const BANNER_LINES = [
-  "██████╗  ██████╗  █████╗  ██████╗██╗  ██╗    ██████╗ ██╗",
-  "██╔══██╗██╔═══██╗██╔══██╗██╔════╝██║  ██║    ██╔══██╗██║",
-  "██████╔╝██║   ██║███████║██║     ███████║    ██████╔╝██║",
-  "██╔══██╗██║   ██║██╔══██║██║     ██╔══██║    ██╔═══╝ ██║",
-  "██║  ██║╚██████╔╝██║  ██║╚██████╗██║  ██║    ██║     ██║",
-  "╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝    ╚═╝     ╚═╝",
+  "███████╗██╗   ██╗ █████╗ ██████╗     ██████╗ ██╗",
+  "██╔════╝██║   ██║██╔══██╗██╔══██╗    ██╔══██╗██║",
+  "███████╗██║   ██║███████║██████╔╝    ██████╔╝██║",
+  "╚════██║╚██╗ ██╔╝██╔══██║██╔══██╗    ██╔═══╝ ██║",
+  "███████║ ╚████╔╝ ██║  ██║██████╔╝    ██║     ██║",
+  "╚══════╝  ╚═══╝  ╚═╝  ╚═╝╚═════╝     ╚═╝     ╚═╝",
 ];
 
 function renderStaticBanner(theme: Theme): string {
@@ -36,7 +36,7 @@ class WelcomeHeaderComponent implements Component {
 
   private content(): string {
     const banner = renderStaticBanner(this.theme);
-    const tagline = this.theme.fg("dim", "Engineering Discipline Extension");
+    const tagline = this.theme.fg("dim", "Šváb Pi Engineering Discipline Extension");
     const tipLine = this.theme.fg("muted", "Tip: Always start with /clarify. Then activate a durable /goal.");
     const clarifyLine = this.theme.fg("dim", "Never skip /clarify — it prevents wasted effort.");
     const hints = [

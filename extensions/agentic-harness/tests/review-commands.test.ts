@@ -84,7 +84,7 @@ describe("Review Command (/review)", () => {
   it("should accept a full GitHub PR URL and pass it to gh pr diff", async () => {
     const { mockPi, commands } = setupMockPi();
     const review = commands.get("review");
-    const url = "https://github.com/tmdgusya/roach-pi/pull/27";
+    const url = "https://github.com/portrik/svab-pi/pull/27";
     await review.handler(url, makeCtx());
     expect(mockPi.sendUserMessage).toHaveBeenCalledTimes(1);
     const prompt = mockPi.sendUserMessage.mock.calls[0][0];

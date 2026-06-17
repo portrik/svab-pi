@@ -18,7 +18,7 @@ export interface SimpleTodoState {
   todos: SimpleTodoItem[];
 }
 
-const TODO_STATE_ENTRY_TYPE = "roach-pi.todo-state";
+const TODO_STATE_ENTRY_TYPE = "svab-pi.todo-state";
 
 // In-memory todo state for the current session
 let currentTodos: SimpleTodoItem[] = [];

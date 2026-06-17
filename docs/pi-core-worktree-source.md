@@ -12,7 +12,7 @@ This document captures the editable pi core checkout prepared for the worktree-s
 - Installed/global pi package checked for parity: `/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent`, version `0.79.4`
 - Working tree after preparation: clean
 
-This is the durable editable source for core work. Do not implement core behavior by patching `node_modules` in this roach-pi extension checkout.
+This is the durable editable source for core work. Do not implement core behavior by patching `node_modules` in this svab-pi extension checkout.
 
 ## Relevant core files for later subgoals
 

@@ -16,7 +16,7 @@ Implement first-class `pi --worktree` support in pi core, including `/exit` alia
 - Add `--worktree` description in `printHelp()`.
 
 ### 2. `packages/coding-agent/src/core/worktree-session.ts` (NEW)
-**Purpose**: Core worktree lifecycle helper, independent of roach-pi extension.
+**Purpose**: Core worktree lifecycle helper, independent of svab-pi extension.
 
 ```typescript
 export interface WorktreeSession {
@@ -142,7 +142,7 @@ In `main()`:
 | SIGTERM/SIGHUP | Yes | Any | Skip prompt, emit session_shutdown, keep worktree |
 
 ## Constraints
-- Implement only in pi core, not roach-pi.
+- Implement only in pi core, not svab-pi.
 - No named worktrees, no resume recovery, no orphan cleanup.
 - Dirty default = preserve.
 - Prompt must happen before TUI shutdown.

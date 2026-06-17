@@ -219,9 +219,9 @@ function extractRgb(bgAnsi: string): string {
   return match ? `${match[1]};${match[2]};${match[3]}` : "0;0;0";
 }
 
-// RoachFooter
+// SvabFooter
 
-export class RoachFooter implements Component {
+export class SvabFooter implements Component {
   private theme: Theme;
   private footerData: ReadonlyFooterDataProvider;
   private footerCtx: FooterContext;
@@ -351,7 +351,7 @@ export class RoachFooter implements Component {
 
     // Session-cumulative cache-hit rate (steady, cost-oriented) and the latest
     // turn's rate (live, the cache-first loop's heartbeat). The turn rate leads;
-    // the session average trails as faint context — mirroring roach-code's
+    // the session average trails as faint context — mirroring a cache-first
     // "cache N% · avg N%" status tag.
     const sessionTotal = this.cacheStats.totalInput + this.cacheStats.totalCacheRead;
     const sessionRate = sessionTotal > 0 ? Math.round((this.cacheStats.totalCacheRead / sessionTotal) * 100) : 0;

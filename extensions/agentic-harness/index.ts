@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { createBashTool, isToolCallEventType } from "@earendil-works/pi-coding-agent";
 import { Type, type TUnsafe } from "@sinclair/typebox";
-import { RoachFooter, type CacheStats, type ActiveTools, type ActiveToolStatus } from "./footer.js";
+import { SvabFooter, type CacheStats, type ActiveTools, type ActiveToolStatus } from "./footer.js";
 import { resolveAgenticUiSettings } from "./ui-settings.js";
 import { registerWelcomeCommand, showWelcomeHeader } from "./welcome-ui.js";
 import { registerEditorStashCommands } from "./editor-stash.js";
@@ -2098,7 +2098,7 @@ Do not start multi-step implementation without a clear understanding of what the
         `  ${settingsPath}`,
         "",
         "This hides the default Skills/Extensions/Themes listing at startup.",
-        "The ROACH PI banner takes over instead.",
+        "The Šváb Pi banner takes over instead.",
         "",
         "Proceed?",
       ].join("\n"),
@@ -2115,11 +2115,11 @@ Do not start multi-step implementation without a clear understanding of what the
       const { execSync } = await import("child_process");
       execSync("gh auth status", { stdio: "pipe", timeout: 3000 });
       const star = await ctx.ui.confirm(
-        "Star roach-pi on GitHub?",
-        "Thanks for using ROACH PI! Would you like to star the repository? ⭐",
+        "Star svab-pi on GitHub?",
+        "Thanks for using Šváb Pi! Would you like to star the repository? ⭐",
       );
       if (star) {
-        execSync("gh api user/starred/tmdgusya/roach-pi -X PUT", { stdio: "pipe" });
+        execSync("gh api user/starred/portrik/svab-pi -X PUT", { stdio: "pipe" });
         ctx.ui.notify("Thanks for the star! ⭐", "info");
       }
     } catch {
@@ -2393,7 +2393,7 @@ Do not start multi-step implementation without a clear understanding of what the
       refreshGitStats();
       const unsubBranch = footerData.onBranchChange(() => refreshGitStats());
 
-      const footer = new RoachFooter(theme, footerData, {
+      const footer = new SvabFooter(theme, footerData, {
         cwd: ctx.cwd,
         getModelName: () => ctx.model?.name,
         getContextUsage: () => ctx.getContextUsage(),

@@ -116,7 +116,7 @@ test("docs index includes workflow video contract", () => {
   );
   assert.match(
     workflowSection,
-    /<video[^>]*aria-label="[^"]*ROACH PI command workflow[^"]*"[^>]*>/i,
+    /<video[^>]*aria-label="[^"]*Šváb Pi command workflow[^"]*"[^>]*>/i,
     "Expected a native video element with an accessible workflow label.",
   );
   assert.match(
@@ -151,7 +151,7 @@ test("forbidden BETRO/BYER branding text is absent", () => {
   assert.ok(!forbidden.test(css), "Forbidden branding found in docs/style.css.");
 });
 
-test("hero ASCII banner is readable ROACH PI text", () => {
+test("hero ASCII banner is readable SVAB PI text", () => {
   const html = readUtf8(docsIndexPath);
   const match = html.match(/<pre[^>]*class="hero-ascii"[^>]*>([\s\S]*?)<\/pre>/i);
   assert.ok(match, "Expected <pre class=\"hero-ascii\"> block.");
@@ -163,8 +163,8 @@ test("hero ASCII banner is readable ROACH PI text", () => {
 
   assert.match(
     heroAscii,
-    /ROACH\s+PI/i,
-    "Expected hero ASCII banner text to include readable ROACH PI.",
+    /SVAB\s+PI/i,
+    "Expected hero ASCII banner text to include readable SVAB PI.",
   );
   assert.doesNotMatch(
     heroAscii,

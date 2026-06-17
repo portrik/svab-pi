@@ -141,10 +141,7 @@ export function hiddenPreviewExpandHint(theme: Theme): string {
 // Claude-Code-style single-line result summary (e.g. "Read 200 lines · expand").
 // Used by the compact preview mode so tool results render as one informative line.
 export function compactResultLine(theme: Theme, summary: string): string {
-  return theme.fg(
-    "muted",
-    `╰─ ${summary} · ${themedKeyHint(theme, "app.tools.expand", "expand")}`,
-  );
+  return theme.fg("muted", `╰─ ${summary} · ${themedKeyHint(theme, "app.tools.expand", "expand")}`);
 }
 
 export function showingFooter(theme: Theme, shown: number, total: number, label: string): string {

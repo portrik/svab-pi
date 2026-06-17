@@ -1,12 +1,12 @@
-# ROACH PI — Engineering Discipline for pi
+# Šváb Pi — Engineering Discipline for pi
 
-ROACH PI is an extension suite for the pi coding agent that turns freeform coding sessions into a disciplined engineering loop. It's built around a simple conviction: **vague requests should not become vague code**.
+Šváb Pi is an extension suite for the pi coding agent that turns freeform coding sessions into a disciplined engineering loop. It's built around a simple conviction: **vague requests should not become vague code**.
 
-The core workflow is **clarify → goal → implement → verify**. When you start a task, ROACH PI first forces ambiguity into the open with dynamic, context-aware questions (`/clarify`), then converts the clarified scope into a durable goal (`/goal`) that runs through subgoals, evidence capture, and verifier-gated completion.
+The core workflow is **clarify → goal → implement → verify**. When you start a task, Šváb Pi first forces ambiguity into the open with dynamic, context-aware questions (`/clarify`), then converts the clarified scope into a durable goal (`/goal`) that runs through subgoals, evidence capture, and verifier-gated completion.
 
 ## Extensions
 
-Beyond the core loop, ROACH PI bundles seven extensions that make pi feel more like an IDE than a chat box:
+Beyond the core loop, Šváb Pi bundles seven extensions that make pi feel more like an IDE than a chat box:
 
 - **Agentic Harness** — subagent orchestration (single, parallel, chain, async), single-pass code review (`/review`), team mode, and structured progress tracking with live footer state.
 - **FFF Search** — git-aware fuzzy file and content search with frecency ranking, replacing pi's default search. Powers both tools and `@` autocomplete.
@@ -23,7 +23,7 @@ Everything is plain TypeScript and Markdown in this repository. Commands, tools,
 ## Install
 
 ```bash
-pi install git:github.com/tmdgusya/roach-pi
+pi install git:github.com/portrik/svab-pi
 ```
 
 Then restart `pi` and run `/setup` once.

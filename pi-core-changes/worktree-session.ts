@@ -2,7 +2,7 @@
  * Worktree session lifecycle helper.
  *
  * Creates and manages temporary git worktrees for pi sessions started with
- * `--worktree`. This module is independent of the roach-pi extension worktree
+ * `--worktree`. This module is independent of the svab-pi extension worktree
  * helper and operates at the pi core session level.
  */
 

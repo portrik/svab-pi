@@ -1,11 +1,11 @@
 import { TUI } from "@earendil-works/pi-tui";
 
-const PATCHED = Symbol.for("roach-pi.tui-scroll-safe.patched");
-const CURSOR_STATE = Symbol.for("roach-pi.tui-scroll-safe.cursor-state");
-const RENDER_EMITTED_OUTPUT = Symbol.for("roach-pi.tui-scroll-safe.render-emitted-output");
-const POSITIONING_CURSOR = Symbol.for("roach-pi.tui-scroll-safe.positioning-cursor");
-const QUIET_RENDER_PENDING = Symbol.for("roach-pi.tui-scroll-safe.quiet-render-pending");
-const ORIGINAL_REQUEST_RENDER = Symbol.for("roach-pi.tui-scroll-safe.original-request-render");
+const PATCHED = Symbol.for("svab-pi.tui-scroll-safe.patched");
+const CURSOR_STATE = Symbol.for("svab-pi.tui-scroll-safe.cursor-state");
+const RENDER_EMITTED_OUTPUT = Symbol.for("svab-pi.tui-scroll-safe.render-emitted-output");
+const POSITIONING_CURSOR = Symbol.for("svab-pi.tui-scroll-safe.positioning-cursor");
+const QUIET_RENDER_PENDING = Symbol.for("svab-pi.tui-scroll-safe.quiet-render-pending");
+const ORIGINAL_REQUEST_RENDER = Symbol.for("svab-pi.tui-scroll-safe.original-request-render");
 
 let quietRenderActive = false;
 const pendingQuietRenderInstances = new Set<PatchedTui>();

@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { escapeControlChars, stripAnsi } from "../src/terminal-text.ts";
-import {
-  defaultCodePreviewSettings,
-  normalizeSettings,
-  updateSetting,
-} from "../src/settings.ts";
+import { defaultCodePreviewSettings, normalizeSettings, updateSetting } from "../src/settings.ts";
 
 describe("compact previews setting", () => {
   it("exposes a boolean compactPreviews default", () => {

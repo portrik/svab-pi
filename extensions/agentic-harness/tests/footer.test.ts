@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { visibleWidth, type TUI } from "@earendil-works/pi-tui";
 import type { ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
-import { ICONS, ICONS_PLAIN, RoachFooter, setUseNerdIcons, type ActiveTools, type CacheStats } from "../footer.js";
+import { ICONS, ICONS_PLAIN, SvabFooter, setUseNerdIcons, type ActiveTools, type CacheStats } from "../footer.js";
 import { setCurrentTodos, type SimpleTodoItem } from "../simple-todo.js";
 import type { FooterGlyphMode } from "../ui-settings.js";
 
@@ -53,8 +53,8 @@ function createFooter(
   glyphs?: FooterGlyphMode,
   goalSummary?: string,
   overrides: FooterTestOverrides = {},
-): RoachFooter {
-  return new RoachFooter(
+): SvabFooter {
+  return new SvabFooter(
     stubTheme,
     footerData(statuses),
     {
@@ -78,7 +78,7 @@ function expectAllLinesFit(lines: string[], width: number): void {
   }
 }
 
-describe("RoachFooter Powerline styling", () => {
+describe("SvabFooter Powerline styling", () => {
   it("defaults to plain footer glyphs without Nerd Font or literal separators", () => {
     const rendered = createFooter().render(100).join("\n");
 
@@ -104,7 +104,7 @@ describe("RoachFooter Powerline styling", () => {
   });
 
   it("renders solid background blocks with 48;2 ANSI sequences", () => {
-    const footer = new RoachFooter(
+    const footer = new SvabFooter(
       ansiTheme,
       footerData(),
       {
@@ -130,7 +130,7 @@ describe("RoachFooter Powerline styling", () => {
   });
 
   it("does not insert visible separator columns in plain glyph mode", () => {
-    const footer = new RoachFooter(
+    const footer = new SvabFooter(
       ansiTheme,
       footerData(),
       {
@@ -154,7 +154,7 @@ describe("RoachFooter Powerline styling", () => {
   });
 });
 
-describe("RoachFooter status bridge", () => {
+describe("SvabFooter status bridge", () => {
   it("renders the base footer without extension statuses", () => {
     const footer = createFooter();
     const lines = footer.render(150);
@@ -174,7 +174,7 @@ describe("RoachFooter status bridge", () => {
   });
 
   it("renders a per-turn cache rate alongside the session average", () => {
-    const footer = new RoachFooter(
+    const footer = new SvabFooter(
       stubTheme,
       footerData(),
       {
@@ -450,7 +450,7 @@ describe("RoachFooter status bridge", () => {
   });
 
   it("renders active tool intent text in the tools segment", () => {
-    const footer = new RoachFooter(
+    const footer = new SvabFooter(
       ansiTheme,
       footerData(),
       {
@@ -474,7 +474,7 @@ describe("RoachFooter status bridge", () => {
   });
 
   it("keeps footer width-safe with shimmered active tool intent", () => {
-    const footer = new RoachFooter(
+    const footer = new SvabFooter(
       ansiTheme,
       footerData(),
       {
