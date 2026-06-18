@@ -4,11 +4,6 @@ const PATCHED = Symbol.for("svab-pi.tui-scroll-safe.patched");
 const CURSOR_STATE = Symbol.for("svab-pi.tui-scroll-safe.cursor-state");
 const RENDER_EMITTED_OUTPUT = Symbol.for("svab-pi.tui-scroll-safe.render-emitted-output");
 const POSITIONING_CURSOR = Symbol.for("svab-pi.tui-scroll-safe.positioning-cursor");
-const QUIET_RENDER_PENDING = Symbol.for("svab-pi.tui-scroll-safe.quiet-render-pending");
-const ORIGINAL_REQUEST_RENDER = Symbol.for("svab-pi.tui-scroll-safe.original-request-render");
-
-let quietRenderActive = false;
-const pendingQuietRenderInstances = new Set<PatchedTui>();
 
 type CursorState = {
   row?: number;
@@ -28,35 +23,10 @@ type PatchedTui = {
   [RENDER_EMITTED_OUTPUT]?: boolean;
   requestRender?(force?: boolean): void;
   [POSITIONING_CURSOR]?: boolean;
-  [QUIET_RENDER_PENDING]?: boolean;
-  [ORIGINAL_REQUEST_RENDER]?: (force?: boolean) => void;
 };
 
-function isQuietRenderActive(): boolean {
-  return quietRenderActive;
-}
-
-function markQuietRenderPending(instance: PatchedTui): void {
-  instance[QUIET_RENDER_PENDING] = true;
-  pendingQuietRenderInstances.add(instance);
-}
-
-function flushPendingQuietRenders(): void {
-  const pending = [...pendingQuietRenderInstances];
-  pendingQuietRenderInstances.clear();
-  for (const instance of pending) {
-    if (!instance[QUIET_RENDER_PENDING]) continue;
-    instance[QUIET_RENDER_PENDING] = false;
-    instance[ORIGINAL_REQUEST_RENDER]?.call(instance, false);
-  }
-}
-
-export function setScrollSafeRenderQuiet(active: boolean, tui?: unknown): void {
+export function setScrollSafeRenderQuiet(_active: boolean, tui?: unknown): void {
   if (tui) installScrollSafeTuiPatch(tui);
-
-  quietRenderActive = active;
-  if (active) return;
-  flushPendingQuietRenders();
 }
 
 /**
@@ -80,11 +50,6 @@ export function installScrollSafeTuiPatch(tui?: unknown): void {
   const originalRequestRender = proto.requestRender;
   if (typeof originalRequestRender === "function") {
     proto.requestRender = function requestRender(this: PatchedTui, force = false): void {
-      this[ORIGINAL_REQUEST_RENDER] = originalRequestRender as (force?: boolean) => void;
-      if (isQuietRenderActive() && !force) {
-        markQuietRenderPending(this);
-        return;
-      }
       return (originalRequestRender as (this: PatchedTui, force?: boolean) => void).call(this, force);
     };
   }
@@ -92,14 +57,6 @@ export function installScrollSafeTuiPatch(tui?: unknown): void {
   const originalDoRender = proto.doRender;
   if (typeof originalDoRender === "function") {
     proto.doRender = function doRender(this: PatchedTui, ...args: unknown[]): unknown {
-      if (typeof originalRequestRender === "function") {
-        this[ORIGINAL_REQUEST_RENDER] = originalRequestRender as (force?: boolean) => void;
-      }
-      if (isQuietRenderActive()) {
-        markQuietRenderPending(this);
-        return;
-      }
-
       const terminal = this.terminal;
       const originalWrite = terminal.write;
       const originalHideCursor = terminal.hideCursor;

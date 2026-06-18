@@ -81,7 +81,7 @@ describe("scroll-safe TUI patch", () => {
     expect(output).not.toContain("\x1b[3J");
   });
 
-  it("coalesces non-forced render requests while quiet", () => {
+  it("allows non-forced prompt render requests while the quiet compatibility flag is active", () => {
     class FakeTui {
       calls = 0;
       requestRender(_force = false) { this.calls += 1; }
@@ -92,15 +92,13 @@ describe("scroll-safe TUI patch", () => {
     setScrollSafeRenderQuiet(true, tui);
     tui.requestRender();
     tui.requestRender();
-    expect(tui.calls).toBe(0);
+    expect(tui.calls).toBe(2);
 
     setScrollSafeRenderQuiet(false, tui);
-    expect(tui.calls).toBe(1);
-    setScrollSafeRenderQuiet(false, tui);
-    expect(tui.calls).toBe(1);
+    expect(tui.calls).toBe(2);
   });
 
-  it("suppresses forced renders while quiet and flushes once afterward", () => {
+  it("allows forced renders while the quiet compatibility flag is active", () => {
     class FakeTui {
       calls = 0;
       renders = 0;
@@ -121,14 +119,14 @@ describe("scroll-safe TUI patch", () => {
     setScrollSafeRenderQuiet(true, tui);
     tui.requestRender(true);
     expect(tui.calls).toBe(1);
-    expect(tui.renders).toBe(0);
+    expect(tui.renders).toBe(1);
 
     setScrollSafeRenderQuiet(false, tui);
-    expect(tui.calls).toBe(2);
+    expect(tui.calls).toBe(1);
     expect(tui.renders).toBe(1);
   });
 
-  it("skips already scheduled renders while quiet", () => {
+  it("allows direct renders while the quiet compatibility flag is active", () => {
     const terminal = new MockTerminal();
     const ui = new TUI(terminal as any, false);
     installScrollSafeTuiPatch(ui);
@@ -139,7 +137,7 @@ describe("scroll-safe TUI patch", () => {
 
     setScrollSafeRenderQuiet(true, ui);
     (ui as any).doRender();
-    expect(terminal.writes).toEqual([]);
+    expect(terminal.writes.join("")).toContain("line");
     setScrollSafeRenderQuiet(false, ui);
   });
 
