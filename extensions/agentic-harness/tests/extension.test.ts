@@ -1413,7 +1413,8 @@ describe("working row shimmer", () => {
 
       const plainWorkingMessage = () => String(setWorkingMessage.mock.calls.at(-1)?.[0] ?? "").replace(/\x1b\[[0-9;]*m/g, "");
 
-      expect(setWorkingIndicator).toHaveBeenCalledWith(expect.objectContaining({ intervalMs: 80 }));
+      expect(setWorkingIndicator).toHaveBeenCalledWith();
+      expect(setWorkingIndicator.mock.calls[0]?.[0]).toBeUndefined();
       expect(plainWorkingMessage()).toContain("Working…");
 
       await events.get("tool_execution_start")![0]({ toolCallId: "tool-1", toolName: "read", intent: "Reading project files" } as any, ctx);

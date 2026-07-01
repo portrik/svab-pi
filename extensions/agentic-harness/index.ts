@@ -178,9 +178,7 @@ let currentClarificationCompactionSummary: string | null = null;
 let latestClarificationState: ClarificationState | null = null;
 let latestClarificationRootDir: string | null = null;
 const goalFooterInvalidators = new Set<() => void>();
-const WORKING_INDICATOR_INTERVAL_MS = 80;
 const WORKING_BASE_MESSAGE = "Working…";
-const WORKING_SPINNER_FRAME = "⠋";
 
 let workingUiContext: any | null = null;
 let scrollSafeTuiContext: unknown | null = null;
@@ -205,11 +203,8 @@ function applyWorkingMessage(ctx: any): void {
 }
 
 function configureWorkingIndicator(ctx: any): void {
-  if (!ctx?.ui?.setWorkingIndicator || !ctx?.ui?.theme) return;
-  ctx.ui.setWorkingIndicator({
-    frames: [ctx.ui.theme.fg("accent", WORKING_SPINNER_FRAME)],
-    intervalMs: WORKING_INDICATOR_INTERVAL_MS,
-  });
+  if (!ctx?.ui?.setWorkingIndicator) return;
+  ctx.ui.setWorkingIndicator();
 }
 
 function showWorkingMessage(ctx: any): void {
