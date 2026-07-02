@@ -14,15 +14,17 @@
 - [ ] T004 Fill `data-model.md` with state/entities or mark N/A.
 - [ ] T005 Fill `contracts/README.md` with commands/tools/APIs or mark non-contracts.
 - [ ] T006 Fill `quickstart.md` with read order and verification.
+- [ ] T007 For implementation-change specs, record parser-first boundaries, unrepresentable-state modeling, immutable/functional defaults, and any project exceptions.
 
 ## Phase 2: Consistency Review
 
-- [ ] T007 Confirm requirements cite checked-in paths.
-- [ ] T008 Record mismatches/TODOs without changing runtime code.
-- [ ] T009 Run relevant docs/spec verification and record evidence.
+- [ ] T008 Confirm requirements cite checked-in paths.
+- [ ] T009 Record mismatches/TODOs without changing runtime code for current-state specs.
+- [ ] T010 Confirm reviewer/verifier guidance can fail implementation work that violates parser-first policy without a spec-named exception.
+- [ ] T011 Run relevant docs/spec verification and record evidence.
 
 ## Dependencies & Execution Order
 
 1. T001 before documentation tasks.
-2. T002-T006 can proceed in parallel after T001.
-3. T007-T009 after artifact drafts exist.
+2. T002-T007 can proceed in parallel after T001.
+3. T008-T011 after artifact drafts exist.

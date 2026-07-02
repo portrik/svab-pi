@@ -43,7 +43,9 @@ ${testSection}
 3. Run every test command listed above. Record results.
 4. Run the full test suite to check for regressions.
 5. Check for residual issues: placeholder code (TODO, FIXME, stubs),
-   debug code (console.log, print statements), commented-out blocks.
+   debug code (console.log, print statements), commented-out blocks,
+   repeated validation instead of boundary parsing, representable invalid states,
+   or mutable/imperative style without a documented project exception.
 
 ## Your Output
 
@@ -51,7 +53,9 @@ Report your verdict as PASS or FAIL.
 
 - If PASS: confirm which criteria were verified and which tests passed.
 - If FAIL: list exactly which criteria failed and why, with file paths
-  and line numbers. Do not suggest fixes — only describe what is wrong.`;
+  and line numbers. Treat parser-first, unrepresentable-state, and
+  immutable/functional-style violations as FAIL unless the project/spec
+  documents the exception. Do not suggest fixes — only describe what is wrong.`;
 }
 
 function buildTestSection(

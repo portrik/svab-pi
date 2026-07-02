@@ -50,8 +50,10 @@ A maintainer can see what is intentionally not changed by this spec work.
 - **FR-004**: Current Agentic Harness behavior MUST document that Goal completion is verifier-gated: evidence is recorded, completion is requested, `reviewer-verifier` runs, and only PASS receipts allow completion.
 - **FR-005**: Current Agentic Harness behavior MUST document that Team mode is disabled by default and requires `PI_ENABLE_TEAM_MODE=1`; workers run with `PI_TEAM_WORKER=1` to suppress recursive orchestration.
 - **FR-006**: Current Agentic Harness behavior MUST document that Sandbox approval behavior depends on `PI_SANDBOX_APPROVAL_MODE`; sandboxed bash registration is OS/env-dependent.
-- **FR-007**: This artifact set MUST cite checked-in paths for every material behavior claim.
-- **FR-008**: This artifact set MUST label external dependencies, generated state, host APIs, feature flags, and platform behavior as boundaries.
+- **FR-007**: Current Agentic Harness behavior MUST document that code-quality enforcement guidance treats repeated validation instead of boundary parsing, representable invalid states, and mutable/imperative style without a project-specific exception as reviewer/verifier blockers.
+- **FR-008**: Current Agentic Harness behavior MUST document that required trust-boundary validation, TypeBox/tool schemas, host contracts, performance constraints, and platform-mutable APIs remain documented exceptions.
+- **FR-009**: This artifact set MUST cite checked-in paths for every material behavior claim.
+- **FR-010**: This artifact set MUST label external dependencies, generated state, host APIs, feature flags, and platform behavior as boundaries.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -63,6 +65,7 @@ A maintainer can see what is intentionally not changed by this spec work.
 - **TeamRun**: Current-state concept documented for Agentic Harness.
 - **SandboxPolicy**: Current-state concept documented for Agentic Harness.
 - **HarnessTodo**: Current-state concept documented for Agentic Harness.
+- **CodeQualityPolicy**: Current-state concept documented for Agentic Harness reviewer/verifier enforcement.
 
 ## Success Criteria *(mandatory)*
 

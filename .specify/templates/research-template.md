@@ -21,3 +21,7 @@
 - **Decision**: [What the spec treats as canonical]
   - **Rationale**: [Why]
   - **Alternatives considered**: [Other options]
+
+## Code Quality Policy Notes
+
+- [Parser-first boundary, unrepresentable-state model, immutable/functional default, or documented project exception]

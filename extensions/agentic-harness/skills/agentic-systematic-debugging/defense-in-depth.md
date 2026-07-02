@@ -1,68 +1,60 @@
-# Defense-in-Depth Validation
+# Defense-in-Depth Parsing
 
 ## Overview
 
-When you fix a bug caused by invalid data, adding validation at one place feels sufficient. But that single check can be bypassed by different code paths, refactoring, or mocks.
+When a bug is caused by invalid data, a scattered validation check can be bypassed by another path, refactor, or mock. Prefer one boundary parser that produces a narrow domain value, then make downstream invalid states unrepresentable where practical.
 
-**Core principle:** Validate at EVERY layer data passes through. Make the bug structurally impossible.
+**Core principle:** Parse at boundaries, preserve invariants in the model, and keep required runtime checks only where the project boundary needs them.
 
-## Why Multiple Layers
+## Why Parsers Before Checks
 
-Single validation: "We fixed the bug"
-Multiple layers: "We made the bug impossible"
+Scattered validation: "This path rejected the bad value"
+Boundary parser + invariant model: "Internal code cannot receive the bad value"
 
-Different layers catch different cases:
-- Entry validation catches most bugs
-- Business logic catches edge cases
-- Environment guards prevent context-specific dangers
-- Debug logging helps when other layers fail
+Different layers still have different jobs:
+- Boundary parsing rejects or converts uncertain input once.
+- Domain types/state shapes make impossible combinations unrepresentable.
+- Environment guards prevent context-specific dangers.
+- Debug instrumentation helps when a required boundary fails.
 
 ## The Four Layers
 
-### Layer 1: Entry Point Validation
-**Purpose:** Reject obviously invalid input at API boundary
+### Layer 1: Boundary Parser
+**Purpose:** Convert external or uncertain input into a domain value before use.
 
 ```typescript
-function createProject(name: string, workingDirectory: string) {
-  if (!workingDirectory || workingDirectory.trim() === '') {
-    throw new Error('workingDirectory cannot be empty');
-  }
-  if (!existsSync(workingDirectory)) {
-    throw new Error(`workingDirectory does not exist: ${workingDirectory}`);
-  }
-  if (!statSync(workingDirectory).isDirectory()) {
-    throw new Error(`workingDirectory is not a directory: ${workingDirectory}`);
-  }
-  // ... proceed
+type ProjectDirectory = string & { readonly __brand: "ProjectDirectory" };
+
+function parseProjectDirectory(value: string): ProjectDirectory {
+  const trimmed = value.trim();
+  if (!trimmed) throw new Error("workingDirectory cannot be empty");
+  if (!existsSync(trimmed)) throw new Error(`workingDirectory does not exist: ${trimmed}`);
+  if (!statSync(trimmed).isDirectory()) throw new Error(`workingDirectory is not a directory: ${trimmed}`);
+  return trimmed as ProjectDirectory;
 }
 ```
 
-### Layer 2: Business Logic Validation
-**Purpose:** Ensure data makes sense for this operation
+### Layer 2: Domain Invariant
+**Purpose:** Accept the parsed value so business logic does not repeat the checks.
 
 ```typescript
-function initializeWorkspace(projectDir: string, sessionId: string) {
-  if (!projectDir) {
-    throw new Error('projectDir required for workspace initialization');
-  }
+function initializeWorkspace(projectDir: ProjectDirectory, sessionId: string) {
+  // projectDir was parsed at the boundary; do not revalidate it here.
   // ... proceed
 }
 ```
 
 ### Layer 3: Environment Guards
-**Purpose:** Prevent dangerous operations in specific contexts
+**Purpose:** Prevent dangerous operations in specific contexts.
 
 ```typescript
-async function gitInit(directory: string) {
-  // In tests, refuse git init outside temp directories
-  if (process.env.NODE_ENV === 'test') {
+async function gitInit(directory: ProjectDirectory) {
+  if (process.env.NODE_ENV === "test") {
     const normalized = normalize(resolve(directory));
     const tmpDir = normalize(resolve(tmpdir()));
 
     if (!normalized.startsWith(tmpDir)) {
-      throw new Error(
-        `Refusing git init outside temp dir during tests: ${directory}`
-      );
+      throw new Error(`Refusing git init outside temp dir during tests: ${directory}`);
     }
   }
   // ... proceed
@@ -70,12 +62,12 @@ async function gitInit(directory: string) {
 ```
 
 ### Layer 4: Debug Instrumentation
-**Purpose:** Capture context for forensics
+**Purpose:** Capture context for forensics when required boundaries fail.
 
 ```typescript
-async function gitInit(directory: string) {
+async function gitInit(directory: ProjectDirectory) {
   const stack = new Error().stack;
-  logger.debug('About to git init', {
+  logger.debug("About to git init", {
     directory,
     cwd: process.cwd(),
     stack,
@@ -89,16 +81,17 @@ async function gitInit(directory: string) {
 When you find a bug:
 
 1. **Trace the data flow** - Where does bad value originate? Where used?
-2. **Map all checkpoints** - List every point data passes through
-3. **Add validation at each layer** - Entry, business, environment, debug
-4. **Test each layer** - Try to bypass layer 1, verify layer 2 catches it
+2. **Identify the boundary** - Where should uncertain input become a domain value?
+3. **Make invalid states unrepresentable** - Narrow types or state shape before business logic.
+4. **Keep required checks** - Environment guards, TypeBox/tool schemas, host contracts, and platform APIs stay when documented.
+5. **Test the boundary and invariant** - Prove bad input cannot reach the internal path.
 
 ## Key Insight
 
-All four layers were necessary. During testing, each layer caught bugs the others missed:
-- Different code paths bypassed entry validation
-- Mocks bypassed business logic checks
-- Edge cases on different platforms needed environment guards
-- Debug logging identified structural misuse
+The goal is not validation everywhere. It is impossible bad states inside the core logic:
+- Boundary parser handles uncertain input.
+- Domain model prevents repeated downstream checks.
+- Environment guards cover context-specific hazards.
+- Debug logging explains failures when a boundary contract is broken.
 
-**Don't stop at one validation point.** Add checks at every layer.
+**Don't scatter validation.** Parse once, preserve the invariant, and document any project exception.

@@ -18,13 +18,15 @@ You MUST follow these behavioral guardrails during implementation:
 2. **Scope to the request** — Change only what was asked. No "while I'm here" improvements.
 3. **Verify, don't assume** — If you think something is "probably" true, grep and check first.
 4. **Define success before starting** — Know what "done" looks like before writing code.
+5. **Parser-first quality** — Prefer parsing external or uncertain input into narrow domain types, making invalid states unrepresentable, and immutable/functional style unless the project/spec requires otherwise.
 
 ### Rules
 1. **Surgical Changes** — Minimum edit to achieve the goal. No opportunistic refactoring.
 2. **Match Existing Patterns** — Follow the project's conventions, not your preferences.
 3. **No Premature Abstraction** — Don't add factories, wrappers, or "extensible" patterns unless asked.
-4. **No Defensive Paranoia** — Don't add null checks for guaranteed values or error handling for impossible scenarios.
+4. **No Defensive Paranoia** — Don't add null checks for guaranteed values or error handling for impossible scenarios; parse at trust boundaries instead of scattering checks.
 5. **No Future-Proofing** — Solve today's problem. Don't solve problems that don't exist yet.
+6. **Review-Gated Exceptions** — Required trust-boundary validation, TypeBox/tool schemas, host contracts, performance constraints, and mutable platform APIs are allowed only when documented as project exceptions.
 
 ### Anti-Patterns (Never Do These)
 - "While I'm here" refactoring of nearby code
@@ -32,6 +34,9 @@ You MUST follow these behavioral guardrails during implementation:
 - Making code "extensible" or "future-proof" without being asked
 - Improving type safety on code you weren't asked to change
 - Adding comments that restate what the code does
+- Repeated validation where a boundary parser and narrower domain type would fit
+- Representing invalid states that existing type/state patterns could make impossible
+- Mutable or imperative code where immutable/functional style fits and no project exception is documented
 `;
 
 export function augmentAgentWithKarpathy(agent: AgentConfig | undefined): AgentConfig | undefined {

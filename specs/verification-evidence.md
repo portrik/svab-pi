@@ -1,7 +1,7 @@
 # Verification Evidence
 
 **Date**: 2026-07-01  
-**Scope**: Documentation-only Spec Kit current-state coverage.
+**Scope**: Spec Kit current-state coverage plus code-quality enforcement style policy change spec.
 
 ## Created / Updated Artifacts
 
@@ -17,7 +17,15 @@
 - `specs/README.md`
 - `specs/current-state-cross-check.md`
 - `specs/verification-evidence.md`
-- 8 area directories under `specs/000-*` through `specs/007-*`, each with:
+- 8 current-state area directories under `specs/000-*` through `specs/007-*`, each with:
+  - `spec.md`
+  - `plan.md`
+  - `research.md`
+  - `data-model.md`
+  - `quickstart.md`
+  - `contracts/README.md`
+  - `tasks.md`
+- `specs/008-code-quality-enforcement-style-policy/` implementation-change spec with:
   - `spec.md`
   - `plan.md`
   - `research.md`
@@ -38,6 +46,7 @@
 | Pi code previews | `specs/005-pi-code-previews-current-state/` |
 | MCP adapter | `specs/006-pi-mcp-adapter-current-state/` |
 | Docs and CI static site | `specs/007-docs-ci-static-site-current-state/` |
+| Code quality enforcement style policy | `specs/008-code-quality-enforcement-style-policy/` |
 
 ## Logged Mismatches / TODOs
 
@@ -46,6 +55,40 @@
 3. `extensions/session-loop` is currently in-memory/session-scoped; durable loop jobs would be a future feature.
 
 ## Commands Run
+
+### Agentic harness build
+
+```bash
+npm --prefix extensions/agentic-harness run build
+```
+
+Result: PASS on 2026-07-01 during goal-1.
+
+### Agentic harness full test suite
+
+```bash
+npm --prefix extensions/agentic-harness test
+```
+
+Result: PASS on 2026-07-01 during goal-1.
+
+```text
+Test Files  70 passed (70)
+Tests       706 passed (706)
+```
+
+### Targeted code-quality enforcement tests
+
+```bash
+npm --prefix extensions/agentic-harness test -- tests/discipline.test.ts tests/goal-verifier.test.ts tests/review-commands.test.ts tests/validator-template.test.ts tests/extension.test.ts tests/skill-docs.test.ts tests/agents.test.ts
+```
+
+Result: PASS on 2026-07-01 during goal-1.
+
+```text
+Test Files  7 passed (7)
+Tests       109 passed (109)
+```
 
 ### Docs test
 
@@ -71,7 +114,7 @@ Result: PASS
 
 ```bash
 node - <<'JS'
-// verifies 8 area dirs, required 7 files per area, and no placeholder markers
+// verifies 8 current-state area dirs, required 7 files per area, and no placeholder markers
 JS
 ```
 
@@ -81,6 +124,20 @@ Result: PASS
 Spec structure OK: 8 area dirs x 7 required files; no placeholder markers.
 ```
 
+### Code-quality policy spec-first check
+
+```bash
+node - <<'JS'
+// verifies 008 policy spec required files and parser-first policy markers in governance/templates
+JS
+```
+
+Result: PASS on 2026-07-01 during goal-1/subgoal-1.
+
+```text
+Code quality policy spec OK: 7 files; governance/templates include parser-first, unrepresentable-state, immutable/functional, and project exception markers.
+```
+
 ## Commands Intentionally Not Run
 
-Extension package test/build/check commands were not run for this goal because the requested work is documentation-only and did not modify runtime TypeScript, packages, dependencies, or CI behavior. Existing per-extension verification commands are documented in the relevant `quickstart.md` and `plan.md` artifacts.
+Non-agentic-harness extension package test/build/check commands were not run for this goal because this change touched Spec Kit docs, root guidance, and agentic-harness prompt/reviewer/verifier surfaces only. Existing per-extension verification commands are documented in the relevant `quickstart.md` and `plan.md` artifacts.

@@ -71,6 +71,10 @@ For changes to the lightweight native `team` tool, also verify before merge:
 
 - Follow the patterns established in the existing codebase
 - Keep changes minimal and surgical — see the Karpathy Rules built into this extension
+- Prefer parsing external or uncertain input into narrow domain types over scattered validation checks
+- Make invalid states unrepresentable where practical
+- Prefer immutable/functional style unless the project, host API, performance boundary, or tool contract requires mutation or imperative flow
+- Keep required trust-boundary validation and TypeBox/tool schemas when they are part of the contract
 - No premature abstraction or future-proofing
 - Match existing naming conventions
 

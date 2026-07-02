@@ -38,6 +38,9 @@ describe("goal skill docs", () => {
     expect(src).toContain("/goal evidence");
     expect(src).toContain("verifier subagent returns PASS");
     expect(src).toContain("verifier returns FAIL");
+    expect(src).toContain("parser-first");
+    expect(src).toContain("unrepresentable-state");
+    expect(src).toContain("immutable/functional-style");
     for (const legacySkillName of legacySkillNames) {
       expect(src).not.toContain(legacySkillName);
     }
@@ -56,6 +59,7 @@ describe("clarification skill goal handoff", () => {
     expect(src.toLowerCase()).toContain("non-goals");
     expect(src).toContain("Edge cases");
     expect(src).toContain("Technical context");
+    expect(src).toContain("project exception to parser-first");
     expect(src).toContain("Use explorer only when needed");
     expect(src).toContain("non-code/product/wording clarification");
     expect(src).toContain("technical context is missing/uncertain");

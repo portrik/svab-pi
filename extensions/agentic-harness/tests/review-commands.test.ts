@@ -49,6 +49,10 @@ describe("Review Command (/review)", () => {
     expect(prompt).toContain("Performance");
     expect(prompt).toContain("Test coverage");
     expect(prompt).toContain("Consistency");
+    expect(prompt).toContain("Code quality policy");
+    expect(prompt).toContain("boundary parsing");
+    expect(prompt).toContain("representable invalid states");
+    expect(prompt).toContain("project-specific exception");
     // /review is single-pass: it must NOT instruct the agent to use parallel mode or fleet
     expect(prompt).not.toContain("parallel mode");
     expect(prompt).not.toContain("10 subagents");

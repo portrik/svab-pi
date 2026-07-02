@@ -19,6 +19,7 @@
 - Root dependencies and overrides pin pi packages to the 0.79.x line while bundled dependencies package nested agents, LSP, and MCP adapter code.
 - Static checks run per-extension test/build/check commands and a docs node test; there is no root `npm test` script.
 - `pi-core-changes/` is a checked-in upstream core-change snapshot/test area, not the main local extension runtime.
+- `AGENTS.md` and `CONTRIBUTING.md` document parser-first code quality defaults: boundary parsing over scattered validation, unrepresentable invalid states where practical, immutable/functional defaults, and required exceptions for trust-boundary schemas or host/tool contracts.
 
 ## Integration Boundaries
 

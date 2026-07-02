@@ -20,5 +20,7 @@ Use this artifact set to understand the current behavior of `[AREA]` before chan
 
 ## Notes
 
-- This is documentation-only.
+- Current-state specs are documentation-only.
+- Implementation-change specs must be updated before code changes.
 - Do not infer behavior from local `.pi/` runtime state or ignored generated files.
+- Reviewer/verifier checks should fail parser-first policy violations unless this spec names the project exception.

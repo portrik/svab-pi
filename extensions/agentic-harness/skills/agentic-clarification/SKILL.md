@@ -54,7 +54,7 @@ The hidden runtime checklist must have concrete content for every item before ha
 1. **Objective**: the durable end goal in one sentence.
 2. **Scope**: what is included.
 3. **Non-goals**: what is explicitly excluded.
-4. **Constraints**: compatibility, time, dependencies, user preferences, migration boundaries.
+4. **Constraints**: compatibility, time, dependencies, user preferences, migration boundaries, and any project exception to parser-first/unrepresentable-state/immutable-functional defaults.
 5. **Success criteria**: observable acceptance conditions.
 6. **Evidence required**: tests, commands, screenshots, logs, docs, or manual checks the verifier should expect.
 7. **Risks**: known blockers, regression risks, rollback concerns.

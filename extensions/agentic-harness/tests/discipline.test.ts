@@ -63,13 +63,22 @@ describe("KARPATHY_RULES", () => {
     expect(KARPATHY_RULES).toContain("Scope to the request");
     expect(KARPATHY_RULES).toContain("Verify, don't assume");
     expect(KARPATHY_RULES).toContain("Define success before starting");
+    expect(KARPATHY_RULES).toContain("Parser-first quality");
   });
 
-  it("contains all five rules", () => {
+  it("contains implementation rules", () => {
     expect(KARPATHY_RULES).toContain("Surgical Changes");
     expect(KARPATHY_RULES).toContain("Match Existing Patterns");
     expect(KARPATHY_RULES).toContain("No Premature Abstraction");
     expect(KARPATHY_RULES).toContain("No Defensive Paranoia");
     expect(KARPATHY_RULES).toContain("No Future-Proofing");
+    expect(KARPATHY_RULES).toContain("Review-Gated Exceptions");
+  });
+
+  it("contains reviewer-gated parser-first policy blockers", () => {
+    expect(KARPATHY_RULES).toContain("boundary parser");
+    expect(KARPATHY_RULES).toContain("invalid states");
+    expect(KARPATHY_RULES).toContain("immutable/functional style");
+    expect(KARPATHY_RULES).toContain("project exceptions");
   });
 });

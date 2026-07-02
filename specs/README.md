@@ -1,6 +1,6 @@
 # Spec Kit Current-State Coverage
 
-This directory contains root-level Spec Kit artifact sets for the current implemented state of `svab-pi`.
+This directory contains root-level Spec Kit artifact sets for `svab-pi`: current-state baselines plus implementation-change specs that must land before code changes.
 
 ## Area Breakdown
 
@@ -14,6 +14,7 @@ This directory contains root-level Spec Kit artifact sets for the current implem
 | Pi code previews | `005-pi-code-previews-current-state/` | Tool result renderers, Shiki previews, settings and warning behavior |
 | MCP adapter | `006-pi-mcp-adapter-current-state/` | Local wrapper/compact rendering around bundled `pi-mcp-adapter` |
 | Docs and CI | `007-docs-ci-static-site-current-state/` | Static docs site, docs server script, docs test, GitHub Actions checks |
+| Code quality enforcement style policy | `008-code-quality-enforcement-style-policy/` | Implementation-change spec for parser-first, unrepresentable-state, immutable/functional defaults, and reviewer-failure enforcement |
 
 ## Cross-Check
 
@@ -22,6 +23,8 @@ This directory contains root-level Spec Kit artifact sets for the current implem
 
 ## Rules
 
-- Specs describe observed current behavior only.
-- Mismatches or stale docs are recorded as TODOs/risks inside artifacts.
+- Current-state specs describe observed current behavior only.
+- Implementation-change specs describe intended deltas and must be updated before code/prompt/runtime changes.
+- Mismatches or stale docs are recorded as TODOs/risks inside current-state artifacts.
+- Parser-first boundaries, unrepresentable invalid states, and immutable/functional defaults are required unless a project spec names the exception.
 - The nested `my-project/.specify/` scaffold is not canonical for this repository.

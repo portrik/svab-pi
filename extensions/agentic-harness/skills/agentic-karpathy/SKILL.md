@@ -17,6 +17,7 @@ These rules have no exceptions.
 2. **Scope to the request.** Change what was asked. Nothing more. No "while I'm here" improvements, no opportunistic refactoring, no adding features that weren't requested.
 3. **Verify, don't assume.** If you think a function does X, read it. If you think a type has field Y, check it. If you think a test covers scenario Z, find it. Assumptions are the primary source of LLM coding errors.
 4. **Define success before starting.** Before writing any code, state what "done" looks like in concrete, verifiable terms. If you can't define it, you don't understand the task yet.
+5. **Honor parser-first quality.** Prefer parsing external or uncertain input into narrow domain types, making invalid states unrepresentable, and immutable/functional style unless the project/spec requires a different approach.
 
 ## When To Use
 
@@ -127,7 +128,7 @@ LLMs love to anticipate future needs. This produces code that is more complex th
 
 **Block these impulses:**
 
-- "What if someone calls this with null?" — Is that possible in the current code? If not, don't guard against it.
+- "What if someone calls this with null?" — Is that possible in the current code? If not, don't guard against it; parse at the boundary if the value is uncertain.
 - "This should be configurable" — Is configuration needed now? If not, hardcode it.
 - "We might need to support multiple backends" — Do we have multiple backends? If not, don't abstract.
 - "This could be a generic utility" — Is it used in more than one place? If not, keep it specific.
@@ -169,6 +170,7 @@ During implementation, verify against this list:
 - [ ] I defined concrete success criteria before starting
 - [ ] I'm not solving hypothetical future problems
 - [ ] I'm following existing project conventions, not inventing new ones
+- [ ] Parser-first, unrepresentable-state, and immutable/functional defaults were followed, or the project exception is documented
 - [ ] Every new line of code is necessary for the task
 
 ## Completion Standard

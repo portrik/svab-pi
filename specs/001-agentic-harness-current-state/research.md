@@ -21,10 +21,13 @@
 - Goal completion is verifier-gated: evidence is recorded, completion is requested, `reviewer-verifier` runs, and only PASS receipts allow completion.
 - Team mode is disabled by default and requires `PI_ENABLE_TEAM_MODE=1`; workers run with `PI_TEAM_WORKER=1` to suppress recursive orchestration.
 - Sandbox approval behavior depends on `PI_SANDBOX_APPROVAL_MODE`; sandboxed bash registration is OS/env-dependent.
+- Code-quality enforcement guidance is injected into the system prompt and reviewer/verifier surfaces; it fails repeated validation instead of boundary parsing, representable invalid states, or mutable/imperative style unless a project/spec exception is documented.
+- Required trust-boundary validation, TypeBox/tool schemas, host contracts, performance constraints, and platform-mutable APIs remain documented exceptions.
 
 ## Integration Boundaries
 
 - pi extension API and UI APIs
+- TypeBox/tool schemas and host/tool contracts that require runtime validation
 - subagent pi subprocesses
 - tmux availability
 - Linux/macOS sandbox adapters

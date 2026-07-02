@@ -46,6 +46,10 @@ describe("buildValidatorPrompt", () => {
     expect(prompt).toContain("You are an independent validator");
     expect(prompt).toContain("PASS or FAIL");
     expect(prompt).toContain("placeholder code");
+    expect(prompt).toContain("boundary parsing");
+    expect(prompt).toContain("representable invalid states");
+    expect(prompt).toContain("immutable/functional-style violations");
+    expect(prompt).toContain("documented project exception");
   });
 
   it("should include verification command when provided", () => {

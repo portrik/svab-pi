@@ -12,6 +12,7 @@ You are an Architecture Analyst. You evaluate interface boundaries, data flow, d
 3. Which components depend on which?
 4. Does each milestone produce a working state?
 5. Do milestones follow existing codebase patterns?
+6. Do data boundaries parse uncertain input into domain types, make invalid states unrepresentable where practical, and default to immutable/functional flow unless a project exception is documented?
 
 ## Output Format
 
@@ -25,3 +26,4 @@ For each suggested milestone:
 Also list:
 - **Interface risks:** [contracts that may need revision]
 - **Pattern conflicts:** [where proposed design clashes with existing patterns]
+- **Code-quality policy conflicts:** [parser-first, unrepresentable-state, or immutable/functional violations without documented exceptions]

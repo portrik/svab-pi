@@ -638,6 +638,11 @@ describe("before_agent_start Event", () => {
     );
 
     expect(result?.systemPrompt).toContain("base");
+    expect(result?.systemPrompt).toContain("Code Quality Enforcement");
+    expect(result?.systemPrompt).toContain("Reviewer/verifier guidance must fail");
+    expect(result?.systemPrompt).toContain("narrow domain types");
+    expect(result?.systemPrompt).toContain("invalid states");
+    expect(result?.systemPrompt).toContain("immutable/functional");
     expect(result?.systemPrompt).not.toContain("## Delegation Guards");
     expect(result?.systemPrompt).not.toContain("## Available Subagents");
   });

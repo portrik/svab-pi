@@ -225,6 +225,7 @@ Forbidden:
 - Combining refactoring with the fix
 - Sneaking in formatting/cleanup/renaming
 - Adding null-guards without evidence
+- Scattering validation checks when a boundary parser or unrepresentable state would block the cause
 - Swallowing exceptions
 
 If the fix fails, immediately return to Phase 1 or Phase 3. The previous hypothesis was wrong.
@@ -237,6 +238,7 @@ All of the following must be satisfied before closing:
 2. The new failing guard passes.
 3. Related tests are not broken.
 4. You can explain that the fix blocks the cause, not the symptom.
+5. Parser-first, unrepresentable-state, and immutable/functional defaults were followed, or the project exception is documented.
 
 For intermittent bugs, a single pass is not enough. Verification under repeated runs or varying conditions is required.
 
@@ -288,6 +290,7 @@ Use this checklist for self-verification during execution.
 - [ ] Created a single root-cause hypothesis
 - [ ] Created a failing guard before fixing
 - [ ] Applied only a single fix
+- [ ] Preferred boundary parsing/unrepresentable states over scattered validation, or documented why not
 - [ ] Verified via the same path after fixing
 
 ## Completion Standard

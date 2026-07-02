@@ -5,8 +5,8 @@
 
 ## Artifact Structure Checked
 
-- `specs/README.md` maps 8 major repository areas.
-- Each area `000` through `007` contains:
+- `specs/README.md` maps 8 current-state repository areas and separately lists the `008-code-quality-enforcement-style-policy/` implementation-change spec.
+- Each current-state area `000` through `007` contains:
   - `spec.md`
   - `plan.md`
   - `research.md`
@@ -19,8 +19,8 @@
 
 | Area | Representative files checked | Result |
 |------|------------------------------|--------|
-| Repository package/tooling | `package.json`, `.github/workflows/static-checks.yml`, `README.md`, `pi-core-changes/` | Specs match extension registration, Node requirement, CI matrix, and pi-core boundary. |
-| Agentic harness | `extensions/agentic-harness/index.ts`, `goal-*.ts`, `clarification-*.ts`, `team*.ts`, `sandbox/`, README | Specs match commands/tools, durable state, verifier guard, team gating, env/platform boundaries. |
+| Repository package/tooling | `package.json`, `.github/workflows/static-checks.yml`, `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `pi-core-changes/` | Specs match extension registration, Node requirement, CI matrix, root parser-first code-quality guidance, and pi-core boundary. |
+| Agentic harness | `extensions/agentic-harness/index.ts`, `goal-*.ts`, `clarification-*.ts`, `team*.ts`, `sandbox/`, `agents/`, `skills/`, README | Specs match commands/tools, durable state, verifier guard, code-quality policy blockers, team gating, env/platform boundaries. |
 | FFF search | `extensions/fff-search/index.ts`, package/tests | Specs match tool overrides, `multi_grep`, autocomplete, mode/health/rescan commands, fallback behavior, env knobs. |
 | Session loop | `extensions/session-loop/index.ts`, `commands.ts`, `scheduler.ts`, tests/README | Specs match `/loop*` command surface, in-memory scheduler, follow-up delivery, stop/list/shutdown behavior. |
 | Workspace memory | `extensions/workspace-memory/index.ts`, `commands.ts`, `storage.ts`, `recall.ts`, `save.ts`, tests | Specs match session hooks, prompt injection, recall scoring, `memory_save`, `/memory`, and workspace storage boundary. |

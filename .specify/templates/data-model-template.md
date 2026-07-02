@@ -18,6 +18,8 @@
 
 - [Persistent files, runtime state, generated state, or N/A]
 
-## Validation Rules
+## Parsing, Invariants, and Validation Rules
 
-- [Rules visible in current code/tests]
+- [Boundary parser or current validation rule visible in code/tests]
+- [Invalid states made unrepresentable by type/state shape, or why not practical]
+- [Project-required validation, mutable API, or imperative exception]

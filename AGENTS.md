@@ -1,5 +1,14 @@
 # AGENTS
 
+## Code Quality Enforcement
+
+Reviewer/verifier guidance should fail implementation work that ignores these defaults unless the project/spec explicitly requires a different approach:
+
+- Prefer parsing external or uncertain input into narrow domain types over scattered validation checks.
+- Make invalid states unrepresentable where practical.
+- Prefer immutable/functional style over mutation or imperative control flow where it fits the project.
+- Keep required trust-boundary validation, TypeBox/tool schemas, host contracts, and documented project exceptions.
+
 ## Debugging Quick Toggle (Pi startup/autocomplete)
 
 When debugging slow startup or delayed `/` autocomplete, enable the built-in debug flags below.

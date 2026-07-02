@@ -17,7 +17,8 @@ Work only through the durable `/goal` runtime.
 6. Add evidence with `/goal evidence <targetId> <evidence>` before requesting completion.
 7. Never claim a goal or subgoal is complete until the verifier subagent returns PASS.
 8. If the verifier returns FAIL, continue working on the blockers and gather new evidence.
-9. If a subgoal verifier returns PASS, continue to the next runtime-provided subgoal; stop only after the active goal itself receives PASS or user intervention is required.
+9. Treat parser-first, unrepresentable-state, or immutable/functional-style violations as verifier blockers unless the project/spec documents an exception.
+10. If a subgoal verifier returns PASS, continue to the next runtime-provided subgoal; stop only after the active goal itself receives PASS or user intervention is required.
 
 ## New Request Triage
 

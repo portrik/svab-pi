@@ -102,6 +102,7 @@ Provide this prompt to the agent:
 > 4. **Leaky abstractions:** accessing private fields or internal state from outside the module, passing implementation details across module boundaries, changes that make one module depend on another's internal structure.
 > 5. **Stringly-typed code:** new string comparisons against values already defined as constants, new string literals matching existing enum or union type values, magic strings appearing in multiple places without a shared constant.
 > 6. **Unnecessary comments:** comments explaining WHAT the code does, narrating the change, or referencing a task. Delete these. Keep only comments that explain non-obvious WHY — hidden constraints, subtle invariants, workarounds. Example to delete: `// increment counter` above `counter++`. Example to keep: `// Redis returns nil for both "key missing" and "value is empty" — we must distinguish`.
+> 7. **Parser-first policy violations:** repeated validation checks where a boundary parser and narrow domain type would fit, state shapes that allow impossible combinations, or mutable/imperative flow where immutable/functional code fits and no project exception is documented.
 >
 > For each finding, report:
 > - **Quality issue:** [category]

@@ -1190,6 +1190,7 @@ Do not start multi-step implementation without a clear understanding of what the
       "The active goal or subgoal is waiting for verifier review.",
       "- Completion requires verifier PASS from reviewer-verifier.",
       "- If verification fails, continue work on the reported blockers and add new evidence before requesting completion again.",
+      "- Treat parser-first, unrepresentable-state, or immutable/functional-style violations as blockers unless the project/spec documents an exception.",
       "- Do not self-attest completion.",
     ].join("\n"),
     reviewing: [
@@ -1226,6 +1227,17 @@ Do not start multi-step implementation without a clear understanding of what the
     "**Why**: The footer reads structured todo state for progress, and /goal completion is durable only after evidence plus verifier PASS.",
   ].join("\n");
 
+  const CODE_QUALITY_ENFORCEMENT_RULES = [
+    "\n\n## Code Quality Enforcement (REVIEWER-GATED)",
+    "",
+    "Reviewer/verifier guidance must fail implementation work unless the project/spec documents a different approach when code:",
+    "1. Validates repeatedly instead of parsing external or uncertain input into narrow domain types at the boundary.",
+    "2. Allows invalid states that could be made unrepresentable with existing type/state patterns.",
+    "3. Uses mutable or imperative style where immutable/functional code fits the project.",
+    "",
+    "Required trust-boundary validation, TypeBox/tool schemas, host contracts, performance constraints, and platform-mutable APIs remain valid documented exceptions.",
+  ].join("\n");
+
   pi.on("before_agent_start", async (event, ctx) => {
     workingMessageBase = currentWorkingBaseMessage(activeTools);
     showWorkingMessage(ctx);
@@ -1235,7 +1247,7 @@ Do not start multi-step implementation without a clear understanding of what the
     // provider prompt-cache keys. Phase-specific instructions are delivered by
     // the command follow-up prompts that start those workflows instead.
     return {
-      systemPrompt: event.systemPrompt + PROGRESS_TRACKING_RULES,
+      systemPrompt: event.systemPrompt + PROGRESS_TRACKING_RULES + CODE_QUALITY_ENFORCEMENT_RULES,
     };
   });
 
@@ -2042,6 +2054,7 @@ Do not start multi-step implementation without a clear understanding of what the
         "- **Performance**: unnecessary work, algorithmic complexity, sync I/O on hot paths",
         "- **Test coverage**: missing tests, happy-path only, uncovered edge cases",
         "- **Consistency**: naming/convention breaks, duplication of existing utilities, pattern drift",
+      "- **Code quality policy**: repeated validation instead of boundary parsing, representable invalid states, mutable/imperative style without a project-specific exception",
         "",
         "Output the review directly to chat. Group findings by file. For each finding include: what, where (file:line), severity (Critical/High/Medium/Low), and a one-line suggested fix. Do NOT save to file. Do NOT dispatch subagents — this is a single-pass review performed by you directly.",
       ].join("\n");

@@ -8,7 +8,7 @@ The agent dynamically generates questions, selects reviewers, and drives workflo
 
 - **`/clarify`**: The agent asks dynamic, context-aware questions one at a time to resolve ambiguity. It generates questions and choices on the fly based on your request, using codebase exploration only when implementation or uncertain technical context makes it necessary. Ends with a structured Goal Contract.
 - **`/goal <request>`**: Simplified entrypoint. Simple investigation or explanation requests are answered directly, while complex or ambiguous verifier-worthy work is routed through clarification into a Goal Contract before durable execution.
-- **`/goal`**: Owns durable execution for queued goals, active subgoals, evidence, blockers, verifier receipts, and automatic continuation. Completion requires a `reviewer-verifier` PASS.
+- **`/goal`**: Owns durable execution for queued goals, active subgoals, evidence, blockers, verifier receipts, and automatic continuation. Completion requires a `reviewer-verifier` PASS, including parser-first/unrepresentable-state/immutable-functional code-quality blockers unless a project exception is documented.
 - **Structured progress tracking**: Goals, subgoals, evidence, and todos are tracked through durable structured state. The footer shows live task lifecycle transitions (`running` → `completed`/`failed`) and restores progress from structured session replay events.
 - **`/ask`**: Manual test command for the `ask_user_question` tool.
 - **`/reset-phase`**: Resets the workflow phase to idle (useful if you want to exit clarify/goal mode manually).

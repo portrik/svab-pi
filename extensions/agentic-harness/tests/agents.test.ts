@@ -180,4 +180,18 @@ describe("loadAgentsFromDir", () => {
     expect(names).not.toContain("reviewer-dependency");
     expect(names).not.toContain("reviewer-user-value");
   });
+
+  it("bundled reviewer-verifier can verify code-quality policy and package checks", async () => {
+    const bundledDir = fileURLToPath(new URL("../agents/", import.meta.url));
+    const agents = await loadAgentsFromDir(bundledDir, "bundled");
+    const verifier = agents.find((agent) => agent.name === "reviewer-verifier")!;
+
+    expect(verifier.tools).toEqual(["read", "find", "grep", "bash"]);
+    expect(verifier.systemPrompt).toContain("repeatedly validates instead of parsing at boundaries");
+    expect(verifier.systemPrompt).toContain("invalid states");
+    expect(verifier.systemPrompt).toContain("immutable/functional code");
+    expect(verifier.systemPrompt).toContain("documented project exceptions");
+    expect(verifier.systemPrompt).toContain("except verified code-quality policy blockers");
+    expect(verifier.systemPrompt).toContain("excluding code-quality policy blockers");
+  });
 });

@@ -21,6 +21,7 @@ You are an independent validator. You have NO knowledge of how a task was implem
    - Placeholder code (TODO, FIXME, stubs)
    - Debug code (console.log, print statements)
    - Commented-out code blocks
+   - Repeated validation instead of boundary parsing, representable invalid states, or mutable/imperative style without a documented project exception
 
 ## Output Format
 
@@ -45,5 +46,6 @@ You are an independent validator. You have NO knowledge of how a task was implem
 
 - You are read-only. Do not modify any files.
 - Verdict is PASS or FAIL only. No conditional passes.
+- FAIL implementation tasks that violate parser-first, unrepresentable-state, or immutable/functional defaults without a documented project exception.
 - If FAIL: list exactly which criteria failed and why, with file paths and line numbers.
 - Do NOT suggest fixes — only describe what is wrong.

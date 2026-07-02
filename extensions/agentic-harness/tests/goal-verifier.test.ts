@@ -49,6 +49,11 @@ describe("goal verifier prompt and parser", () => {
     expect(prompt).toContain("Verifier runs independently");
     expect(prompt).toContain("npm test passed");
     expect(prompt).toContain("Inspect the repo independently");
+    expect(prompt).toContain("shell tools are unavailable");
+    expect(prompt).toContain("parsing at boundaries");
+    expect(prompt).toContain("invalid states");
+    expect(prompt).toContain("immutable/functional code");
+    expect(prompt).toContain("TypeBox/tool schemas");
     expect(prompt).toContain("Verdict: PASS|FAIL");
     expect(prompt).toContain("Commands Run:");
     expect(prompt).toContain("Evidence Checked:");

@@ -48,8 +48,9 @@ A maintainer can see what is intentionally not changed by this spec work.
 - **FR-003**: Current Repository Package and Tooling behavior MUST document that Root dependencies and overrides pin pi packages to the 0.79.x line while bundled dependencies package nested agents, LSP, and MCP adapter code.
 - **FR-004**: Current Repository Package and Tooling behavior MUST document that Static checks run per-extension test/build/check commands and a docs node test; there is no root `npm test` script.
 - **FR-005**: Current Repository Package and Tooling behavior MUST document that `pi-core-changes/` is a checked-in upstream core-change snapshot/test area, not the main local extension runtime.
-- **FR-006**: This artifact set MUST cite checked-in paths for every material behavior claim.
-- **FR-007**: This artifact set MUST label external dependencies, generated state, host APIs, feature flags, and platform behavior as boundaries.
+- **FR-006**: Current Repository Package and Tooling behavior MUST document that root contribution/agent guidance requires parser-first code quality defaults with documented project exceptions.
+- **FR-007**: This artifact set MUST cite checked-in paths for every material behavior claim.
+- **FR-008**: This artifact set MUST label external dependencies, generated state, host APIs, feature flags, and platform behavior as boundaries.
 
 ### Key Entities *(include if feature involves data)*
 

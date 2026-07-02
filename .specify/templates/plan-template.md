@@ -16,16 +16,18 @@
 **Testing**: [Relevant extension tests/builds/docs checks]  
 **Target Platform**: pi coding-agent runtime on supported terminal platforms  
 **Project Type**: pi extension suite / documentation artifact  
-**Constraints**: Documentation-only; no runtime/package changes  
+**Constraints**: Documentation-only for current-state specs; implementation-change specs update specs before code  
+**Code Quality Style**: Parser-first at boundaries; invalid states unrepresentable where practical; immutable/functional default; explicit project exceptions only  
 **Scale/Scope**: Current checked-in repository state for this area
 
 ## Constitution Check
 
 - Observed behavior first: PASS when claims cite checked-in files.
-- Documentation-only boundary: PASS when no runtime or dependency files are changed for behavior.
+- Spec-first changes: PASS when relevant specs are updated before runtime/prompt/dependency changes.
+- Parser-first code quality: PASS when boundary parsing, unrepresentable invalid states, immutable/functional defaults, and any project exceptions are specified.
 - Root canonical layout: PASS when output lives under root `specs/`.
 - Integration boundaries explicit: PASS when host/dependency/env/platform boundaries are named.
-- Verification evidence required: PASS when evidence lists artifacts, mappings, TODOs, and checks.
+- Verification evidence required: PASS when evidence lists artifacts, mappings, TODOs, checks, and reviewer/verifier policy evidence.
 
 ## Project Structure
 

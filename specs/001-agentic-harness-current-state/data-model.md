@@ -50,6 +50,12 @@
 - **Source paths**: `extensions/agentic-harness/index.ts`, `extensions/agentic-harness/goal-*.ts`, `extensions/agentic-harness/clarification-*.ts`, ...
 - **Lifecycle / ownership**: Owned by the checked-in implementation or configuration listed above.
 
+### CodeQualityPolicy
+
+- **Purpose**: Reviewer/verifier enforcement guidance for boundary parsing, unrepresentable invalid states, immutable/functional defaults, and documented exceptions.
+- **Source paths**: `extensions/agentic-harness/index.ts`, `extensions/agentic-harness/goal-verifier.ts`, `extensions/agentic-harness/validator-template.ts`, `extensions/agentic-harness/discipline.ts`, `extensions/agentic-harness/agents/`, `extensions/agentic-harness/skills/`.
+- **Lifecycle / ownership**: Injected into prompts and checked by tests under `extensions/agentic-harness/tests/`.
+
 ## Relationships
 
 - Agentic Harness behavior is established by the source/config paths listed in `research.md`.
@@ -59,8 +65,10 @@
 
 Durable JSON snapshots under `.pi/agent/goal-state`, `.pi/agent/clarification-state`, `.pi/agent/runs`, and harness/team state roots.
 
-## Validation Rules
+## Parsing, Invariants, and Validation Rules
 
+- Parse/review by inspecting source behavior: code-quality guidance prefers boundary parsing over scattered validation, unrepresentable invalid states where practical, and immutable/functional defaults unless project exceptions are documented.
+- Required validation remains allowed for TypeBox/tool schemas, host contracts, trust boundaries, performance constraints, and platform-mutable APIs.
 - Validate by inspecting source behavior: Registers `/clarify`, `/goal`, `/review`, `/ask`, `/setup`, `/init`, `/reset-phase`, and `/team` commands from the extension entrypoint.
 - Validate by inspecting source behavior: Registers LLM tools including `ask_user_question`, `clarification_state`, `subagent`, `webfetch`, sandboxed bash replacement, and gated `team` when root-session/team-mode conditions allow.
 - Validate by inspecting source behavior: Maintains durable clarification and goal state as JSON snapshots and session replay events under `.pi/agent/*-state/`.
