@@ -1238,6 +1238,15 @@ Do not start multi-step implementation without a clear understanding of what the
     "Required trust-boundary validation, TypeBox/tool schemas, host contracts, performance constraints, and platform-mutable APIs remain valid documented exceptions.",
   ].join("\n");
 
+  const TERMINAL_AND_PROCESS_SAFETY_RULES = [
+    "\n\n## Terminal and Process Safety",
+    "",
+    "- Never send SIGKILL to pi or its parent process. Signals to unrelated processes remain allowed when needed.",
+    "- Run unusually memory-heavy commands serially with bounded output.",
+    "- Check available memory before unusually memory-heavy work.",
+    "- If memory appears insufficient, stop and ask the user to increase Vibe `--ram` or wait until the user explicitly approves proceeding.",
+  ].join("\n");
+
   pi.on("before_agent_start", async (event, ctx) => {
     workingMessageBase = currentWorkingBaseMessage(activeTools);
     showWorkingMessage(ctx);
@@ -1247,7 +1256,7 @@ Do not start multi-step implementation without a clear understanding of what the
     // provider prompt-cache keys. Phase-specific instructions are delivered by
     // the command follow-up prompts that start those workflows instead.
     return {
-      systemPrompt: event.systemPrompt + PROGRESS_TRACKING_RULES + CODE_QUALITY_ENFORCEMENT_RULES,
+      systemPrompt: event.systemPrompt + PROGRESS_TRACKING_RULES + CODE_QUALITY_ENFORCEMENT_RULES + TERMINAL_AND_PROCESS_SAFETY_RULES,
     };
   });
 

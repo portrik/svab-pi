@@ -627,6 +627,41 @@ describe("ask_user_question Tool", () => {
 });
 
 describe("before_agent_start Event", () => {
+  const expectTerminalSafetyRules = (systemPrompt: string | undefined) => {
+    expect(systemPrompt).toContain("Terminal and Process Safety");
+    expect(systemPrompt).toContain("Never send SIGKILL to pi or its parent process");
+    expect(systemPrompt).toContain("Run unusually memory-heavy commands serially");
+    expect(systemPrompt).toContain("bounded output");
+    expect(systemPrompt).toContain("Check available memory before unusually memory-heavy work");
+    expect(systemPrompt).toContain("increase Vibe `--ram`");
+    expect(systemPrompt).toContain("explicitly approves proceeding");
+  };
+
+  it("should inject terminal and process safety into root prompts", async () => {
+    const { mockPi, events } = createMockPi();
+    extension(mockPi);
+
+    const result = await events.get("before_agent_start")![0](
+      { type: "before_agent_start", prompt: "test", systemPrompt: "base" },
+      { cwd: "." } as any,
+    );
+
+    expectTerminalSafetyRules(result?.systemPrompt);
+  });
+
+  it("should inject terminal and process safety into delegated-agent prompts", async () => {
+    process.env.PI_SUBAGENT_DEPTH = "1";
+    const { mockPi, events } = createMockPi();
+    extension(mockPi);
+
+    const result = await events.get("before_agent_start")![0](
+      { type: "before_agent_start", prompt: "test", systemPrompt: "base" },
+      { cwd: "." } as any,
+    );
+
+    expectTerminalSafetyRules(result?.systemPrompt);
+  });
+
   it("should keep idle before_agent_start suffix free of dynamic delegation content", async () => {
     const { mockPi, events } = createMockPi();
     extension(mockPi);
